@@ -361,7 +361,7 @@ EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = "german,french,core2hd,dutch,swedish,reenc,MrLss"
+IGNORE_WORDS = "german,french,core2hd,swedish,reenc,MrLss"
 
 __INITIALIZED__ = False
 
