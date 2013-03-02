@@ -1935,11 +1935,11 @@ class NewHomeAddShows:
     def getTVDBLanguages(self):
         result = tvdb_api.Tvdb().config['valid_languages']
 
-        # Make sure list is sorted alphabetically but 'en' is in front
-        if 'en' in result:
-            del result[result.index('en')]
+        # Make sure list is sorted alphabetically but 'nl' is in front
+        if 'nl' in result:
+            del result[result.index('nl')]
         result.sort()
-        result.insert(0, 'en')
+        result.insert(0, 'nl')
 
         return json.dumps({'results': result})
 
