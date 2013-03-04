@@ -35,6 +35,7 @@ from sickbeard import nzbSplitter
 from sickbeard import ui
 from sickbeard import encodingKludge as ek
 from sickbeard import providers
+from sickbeard import db
 
 from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
@@ -211,7 +212,13 @@ def pickBestResult(results, quality_list=None):
         if quality_list and cur_result.quality not in quality_list:
             logger.log(cur_result.name+" is a quality we know we don't want, rejecting it", logger.DEBUG)
             continue
-        
+
+        myDB = db.DBConnection('failed.db')
+        sql_results = myDB.select("SELECT * FROM failed WHERE release like ?", [re.sub("[\.\-\ ]", "_", cur_result.name)])
+        if len(sql_results) > 0:
+            logger.log(cur_result.name+" has previously failed, rejecting it")
+            continue
+
         if not bestResult or bestResult.quality < cur_result.quality and cur_result.quality != Quality.UNKNOWN:
             bestResult = cur_result
         elif bestResult.quality == cur_result.quality:
@@ -427,6 +434,7 @@ def findSeason(show, season):
             # If this is a torrent all we can do is leech the entire torrent, user will have to select which eps not do download in his torrent client
             else:
                 
+
                 # Season result from Torrent Provider must be a full-season torrent, creating multi-ep result for it.
                 logger.log(u"Adding multi-ep result for full-season torrent. Set the episodes you don't want to 'don't download' in your torrent client if desired!")
                 epObjs = []

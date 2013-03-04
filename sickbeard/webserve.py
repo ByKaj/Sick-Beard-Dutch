@@ -154,6 +154,7 @@ ManageMenu = [
     { 'title': 'Backlog Overview',          'path': 'manage/backlogOverview' },
     { 'title': 'Manage Searches',           'path': 'manage/manageSearches'  },
     { 'title': 'Episode Status Management', 'path': 'manage/episodeStatuses' },
+    { 'title': 'Failed Downloads',          'path': 'manage/failedDownloads' },
 ]
 if sickbeard.USE_SUBTITLES:
     ManageMenu.append({ 'title': 'Missed Subtitle Management', 'path': 'manage/subtitleMissed' })
@@ -718,6 +719,30 @@ class Manage:
 
         redirect("/manage")
 
+    @cherrypy.expose
+    def failedDownloads(self, limit=100, toRemove=None):
+
+        myDB = db.DBConnection("failed.db")
+
+        if toRemove != None:
+            toRemove = toRemove.split("|")
+        else:
+            toRemove = []
+
+        for release in toRemove:
+            myDB.action('DELETE FROM failed WHERE release = ?', [release])
+
+        if limit == "0":
+            sqlResults = myDB.select("SELECT * FROM failed")
+        else:
+            sqlResults = myDB.select("SELECT * FROM failed LIMIT ?", [limit])
+
+        t = PageTemplate(file="manage_failedDownloads.tmpl")
+        t.failedResults = sqlResults
+        t.limit = limit
+        t.submenu = ManageMenu
+
+        return _munge(t)
 
 class History:
 
@@ -1037,7 +1062,7 @@ class ConfigPostProcessing:
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
                     xbmc_data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None, mede8er_data=None,
                     use_banner=None, keep_processed_dir=None, process_automatically=None, rename_episodes=None,
-                    move_associated_files=None, tv_download_dir=None, naming_custom_abd=None, naming_abd_pattern=None, naming_strip_year=None):
+                    move_associated_files=None, tv_download_dir=None, naming_custom_abd=None, naming_abd_pattern=None, naming_strip_year=None, delete_failed=None):
 
         results = []
 
@@ -1073,6 +1098,11 @@ class ConfigPostProcessing:
             naming_custom_abd = 1
         else:
             naming_custom_abd = 0
+
+        if delete_failed == "on":
+            delete_failed = 1
+        else:
+            delete_failed = 0
             
         if naming_strip_year == "on":
             naming_strip_year = 1
@@ -1084,6 +1114,7 @@ class ConfigPostProcessing:
         sickbeard.RENAME_EPISODES = rename_episodes
         sickbeard.MOVE_ASSOCIATED_FILES = move_associated_files
         sickbeard.NAMING_CUSTOM_ABD = naming_custom_abd
+        sickbeard.DELETE_FAILED = delete_failed
         sickbeard.NAMING_STRIP_YEAR = naming_strip_year
 
         sickbeard.metadata_provider_dict['XBMC'].set_config(xbmc_data)
@@ -1909,12 +1940,16 @@ class HomePostProcess:
         return _munge(t)
 
     @cherrypy.expose
-    def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None):
+    def processEpisode(self, dirName=None, nzbName=None, jobName=None, quiet=None, failed="0"):
 
-        if not dir:
+        if failed == "0":
+            failed = False
+        else:
+            failed = True
+        if not dirName:
             redirect("/home/postprocess")
         else:
-            result = processTV.processDir(dir, nzbName)
+            result = processTV.processDir(dirName, nzbName, failed=failed)
             if quiet != None and int(quiet) == 1:
                 return result
 
