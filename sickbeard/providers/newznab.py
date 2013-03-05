@@ -177,7 +177,7 @@ class NewznabProvider(generic.NZBProvider):
                   "maxage": sickbeard.USENET_RETENTION,
                   "limit": 100,
                   #Cat: 5030 = SD, 5040 = HD (used global). nzb.su uses 5020 = foreign, 5050 = other, nzbs.org uses 5080 = foreign, 5060 = other
-                  "cat": '5030,5040,5020,5050,5060,5080'}
+                  "cat": '5030,5040,5020,5050'}
 
         # if max_age is set, use it, don't allow it to be missing
         if max_age or not params['maxage']:
@@ -284,9 +284,8 @@ class NewznabCache(tvcache.TVCache):
     def _getRSSData(self):
 
         params = {"t": "tvsearch",
-                  "age": sickbeard.USENET_RETENTION,
                   #Cat: 5030 = SD, 5040 = HD (used global). nzb.su uses 5020 = foreign, 5050 = other, nzbs.org uses 5080 = foreign, 5060 = other
-                  "cat": '5040,5030,5020,5050,5080,5060'}
+                  "cat": '5040,5030,5020,5050'}
 
         # hack this in for now
         if self.provider.getID() == 'nzbs_org':
