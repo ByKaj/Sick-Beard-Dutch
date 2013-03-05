@@ -7,7 +7,7 @@ python:
 # whitelist
 branches:
   only:
-    - ThePirateBay-Dutch
+    - dutch-tpb
 
 before_script: cd ./tests
 script: ./all_tests.py

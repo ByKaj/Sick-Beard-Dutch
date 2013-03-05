@@ -1,1 +1,1 @@
-SICKBEARD_VERSION = "ThePirateBay-Dutch"
+SICKBEARD_VERSION = "dutch-tpb"
