@@ -35,7 +35,7 @@ from sickbeard import nzbSplitter
 from sickbeard import ui
 from sickbeard import encodingKludge as ek
 from sickbeard import providers
-from sickbeard import db
+from sickbeard import re
 
 from sickbeard.exceptions import ex
 from sickbeard.providers.generic import GenericProvider
