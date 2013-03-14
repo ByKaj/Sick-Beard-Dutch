@@ -548,10 +548,6 @@ class AddEmailSubscriptionTable(FixAirByDateSetting):
     def execute(self):
         self.addColumn('tv_shows', 'notify_list', 'TEXT', None)
         self.incDBVersion()
-        self.connection.action("DROP TABLE tmp_tv_shows")
-
-        self.incDBVersion()
-
 
 class Add1080pAndRawHDQualities(RenameSeasonFolders):
     """Add support for 1080p related qualities along with RawHD
