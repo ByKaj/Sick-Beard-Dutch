@@ -162,23 +162,23 @@ class Quality:
 
         checkName = lambda list, func: func([re.search(x, name, re.I) for x in list])
 
-        if checkName(["(pdtv|hdtv|dsr|tvrip|web.dl|webrip).(xvid|x264|h.?264)"], all) and not checkName(["(720|1080)[pi]"], all):
+        if checkName(["(pdtv|hdtv|dsr|tvrip|web[-.]?(dl|rip)).(xvid|x264|h.?264)"], all) and not checkName(["(720|1080)[pi]"], all):
             return Quality.SDTV
         elif checkName(["(dvdrip|bdrip)(.ws)?.(xvid|divx|h.?264|x264)"], any) and not checkName(["(720|1080)[pi]"], all):
             return Quality.SDDVD
-        elif checkName(["720p", "hdtv", "h.?264|x264"], all) or checkName(["hr.ws.pdtv.x264"], any) and not checkName(["(1080)[pi]"], all):          
+        elif checkName(["720p", "hdtv", "[xh]\.?264"], all) or checkName(["hr.ws.pdtv.x264"], any) and not checkName(["(1080)[pi]"], all):          
             return Quality.HDTV                                                                        
         elif checkName(["720p|1080i", "hdtv", "mpeg2"], all):
             return Quality.RAWHDTV                                                                     
-        elif checkName(["1080p", "hdtv", "h.?264|x264"], all):         
+        elif checkName(["1080p", "hdtv", "[xh]\.?264"], all):         
             return Quality.FULLHDTV                                                                    
-        elif checkName(["720p", "web.dl|webrip", "h.?264|x264"], all) or checkName(["720p", "itunes", "h.?264"], all):
+        elif checkName(["720p", "web[-.]?(dl|rip)", "[xh]\.?264"], all) or checkName(["720p", "itunes", "[xh]\.?264"], all):
             return Quality.HDWEBDL                                                                     
-        elif checkName(["1080p", "web.dl|webrip", "h.?264|x264"], all) or checkName(["1080p", "itunes", "h.?264"], all):     
+        elif checkName(["1080p", "web[-.]?(dl|rip)", "[xh]\.?264"], all) or checkName(["1080p", "itunes", "[xh]\.?264"], all):     
             return Quality.FULLHDWEBDL                                                                 
-        elif checkName(["720p", "bluray|hddvd", "h.?264|x264"], all):
+        elif checkName(["720p", "bluray|hddvd", "[xh]\.?264"], all):
             return Quality.HDBLURAY                                                                    
-        elif checkName(["1080p", "bluray|hddvd", "h.?264|x264"], all):
+        elif checkName(["1080p", "bluray|hddvd", "[xh]\.?264"], all):
             return Quality.FULLHDBLURAY
         else:
             return Quality.UNKNOWN
@@ -212,7 +212,7 @@ class Quality:
             if status > x * 100:
                 return (status - x * 100, x)
 
-        return (Quality.NONE, status)
+        return (status, Quality.NONE)
 
     @staticmethod
     def statusFromName(name, assume=True):

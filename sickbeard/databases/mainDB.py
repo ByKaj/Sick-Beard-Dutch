@@ -657,26 +657,32 @@ class Add1080pAndRawHDQualities(AddIMDbInfo):
                 new_quality = new_any
             else:
                 new_quality = self._update_composite_qualities(cur_show["quality"])
-            self.connection.action("UPDATE tv_shows SET quality = ? WHERE tvdb_id = ?", [new_quality, cur_show["tvdb_id"]])
+            self.connection.action("UPDATE tv_shows SET quality = ? WHERE show_id = ?", [new_quality, cur_show["show_id"]])
 
         # update status that are are within the old hdwebdl (1<<3 which is 8) and better -- exclude unknown (1<<15 which is 32768)
-        episodes = self.connection.select("SELECT * FROM tv_episodes WHERE status/100 < 32768 AND status/100 >= 8")
+        logger.log(u"[2/4] Updating the status for the episodes within each show...", logger.MESSAGE)
+        episodes = self.connection.select("SELECT * FROM tv_episodes WHERE status < 3276800 AND status >= 800")
         for cur_episode in episodes:
             self.connection.action("UPDATE tv_episodes SET status = ? WHERE episode_id = ?", [self._update_status(cur_episode["status"]), cur_episode["episode_id"]])
 
         # make two seperate passes through the history since snatched and downloaded (action & quality) may not always coordinate together
 
         # update previous history so it shows the correct action
-        historyAction = self.connection.select("SELECT * FROM history WHERE action/100 < 32768 AND action/100 >= 8")
+        logger.log(u"[3/4] Updating history to reflect the correct action...", logger.MESSAGE)
+        historyAction = self.connection.select("SELECT * FROM history WHERE action < 3276800 AND action >= 800")
         for cur_entry in historyAction:
             self.connection.action("UPDATE history SET action = ? WHERE showid = ? AND date = ?", [self._update_status(cur_entry["action"]), cur_entry["showid"], cur_entry["date"]])
 
         # update previous history so it shows the correct quality
+        logger.log(u"[4/4] Updating history to reflect the correct quality...", logger.MESSAGE)
         historyQuality = self.connection.select("SELECT * FROM history WHERE quality < 32768 AND quality >= 8")
         for cur_entry in historyQuality:
             self.connection.action("UPDATE history SET quality = ? WHERE showid = ? AND date = ?", [self._update_quality(cur_entry["quality"]), cur_entry["showid"], cur_entry["date"]])
 
         self.incDBVersion()
+        # cleanup and reduce db if any previous data was removed
+        logger.log(u"Performing a vacuum on the database.", logger.DEBUG)
+        self.connection.action("VACUUM")
         
 class AddProperNamingSupport(AddIMDbInfo):    
     def test(self):
