@@ -88,7 +88,7 @@ class EmailNotifier:
         lang: Subtitle language wanted
         """
         if sickbeard.EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD:
-            show = self._parseEp(ep_name)
+            show = self._parseEp(ep_name + ": " + lang)
             to = self._generate_recepients(show)
             if len(to) == 0:
                 logger.log('Skipping email notify because there are no configured recepients!', logger.WARN)
