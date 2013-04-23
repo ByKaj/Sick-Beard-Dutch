@@ -24,7 +24,7 @@ import re
 
 from glob import glob
 
-import sickbeard 
+import sickbeard
 from sickbeard import postProcessor
 from sickbeard import db, helpers, exceptions, show_name_helpers
 
@@ -36,6 +36,7 @@ from sickbeard import logger
 from sickbeard import ui, search_queue
 from sickbeard.common import WANTED, statusStrings
 
+from sickbeard.name_parser.parser import NameParser, InvalidNameException
 
 def logHelper (logMessage, logLevel=logger.MESSAGE):
     logger.log(logMessage, logLevel)
@@ -59,7 +60,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
     if ek.ek(os.path.isdir, dirName):
         dirName = ek.ek(os.path.realpath, dirName)
 
-    # if they've got a download dir configured then use it
+    # if the client and Sickbeard are not on the same machine translate the Dir in a network dir
     elif sickbeard.TV_DOWNLOAD_DIR and ek.ek(os.path.isdir, sickbeard.TV_DOWNLOAD_DIR) \
             and ek.ek(os.path.normpath, dirName) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR):
         dirName = ek.ek(os.path.join, sickbeard.TV_DOWNLOAD_DIR, ek.ek(os.path.abspath, dirName).split(os.path.sep)[-1])
@@ -69,6 +70,119 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
     if not ek.ek(os.path.isdir, dirName):
         returnStr += logHelper(u"Unable to figure out what folder to process. If your downloader and Sick Beard aren't on the same PC make sure you fill out your TV download dir in the config.", logger.DEBUG)
         return returnStr
+
+    if dirName == sickbeard.TV_DOWNLOAD_DIR and not nzbName: #Scheduled Post Processing Active
+        #Get at first all the subdir in the dirName
+        for path, dirs, files in ek.ek(os.walk, dirName):
+            break
+    else:
+        path, dirs = ek.ek(os.path.split, dirName) #Script Post Processing
+        if not nzbName is None and os.path.isfile(os.path.join(dirName, nzbName)): #For single file without Subdir
+            files = [os.path.join(dirName, nzbName)]
+            dirs = []
+        else:
+            files = ek.ek(os.listdir, dirName)
+            dirs = [dirs]
+
+    process_result = False
+    videoFiles = filter(helpers.isMediaFile, files)
+
+    # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
+    if nzbName != None and len(videoFiles) >= 2:
+        nzbName = None
+
+    #Process Video File in the current Path
+    for cur_video_file in videoFiles:
+
+        cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file)
+
+        try:
+            processor = postProcessor.PostProcessor(cur_video_file_path, nzbName, failed=failed)
+            process_result = processor.process()
+            process_fail_message = ""
+        except exceptions.PostProcessingFailed, e:
+            process_result = False
+            process_fail_message = ex(e)
+
+        returnStr += processor.log
+
+        if process_result:
+                returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
+        else:
+            returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
+
+    #Process Video File in all TV Subdir
+    for dir in [x for x in dirs if validateDir(path, x, returnStr)]:
+
+        process_result = False
+
+        for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dir), topdown=False):
+
+            videoFiles = filter(helpers.isMediaFile, fileList)
+            notwantedFiles = [x for x in fileList if x not in videoFiles]
+
+            # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
+            if nzbName != None and len(videoFiles) >= 2:
+                nzbName = None
+
+            for cur_video_file in videoFiles:
+
+                cur_video_file_path = ek.ek(os.path.join, processPath, cur_video_file)
+
+                try:
+                    processor = postProcessor.PostProcessor(cur_video_file_path, nzbName)
+                    process_result = processor.process()
+                    process_fail_message = ""
+                except exceptions.PostProcessingFailed, e:
+                    process_result = False
+                    process_fail_message = ex(e)
+
+                returnStr += processor.log
+
+                if process_result:
+                    returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
+                else:
+                    returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
+
+                #If something fail abort the processing on dir
+                if not process_result:
+                    break
+
+            #Delete all file not needed
+            for cur_file in notwantedFiles:
+                if sickbeard.KEEP_PROCESSED_DIR or not process_result:
+                    break
+
+                cur_file_path = ek.ek(os.path.join, processPath, cur_file)
+
+                try:
+                    processor = postProcessor.PostProcessor(cur_file_path, nzbName)
+                    processor._delete(cur_file_path)
+                    returnStr += logHelper(u"Deleting succeeded for " + cur_file_path, logger.DEBUG)
+                except exceptions.PostProcessingFailed, e:
+                    process_fail_message = ex(e)
+
+                returnStr += processor.log
+
+            if not sickbeard.KEEP_PROCESSED_DIR and \
+            ek.ek(os.path.normpath, processPath) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR):
+
+                if not ek.ek(os.listdir, processPath) == []:
+                    returnStr += logHelper(u"Skipping Deleting folder " + processPath + ' because some files was not deleted/processed', logger.DEBUG)
+                    continue
+
+                returnStr += logHelper(u"Deleting folder " + processPath, logger.DEBUG)
+
+                try:
+                    shutil.rmtree(processPath)
+                except (OSError, IOError), e:
+                    returnStr += logHelper(u"Warning: unable to remove the folder " + dirName + ": " + ex(e), logger.WARNING)
+
+    return returnStr
+
+def validateDir(path, dirName, returnStr):
+
+    returnStr += logHelper(u"Processing folder "+dirName, logger.DEBUG)
 
     if failed:
         returnStr += logHelper(u"Failed download detected: (" + str(nzbName) + ", " + dirName + ")")
@@ -91,6 +205,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
         # If that fails, we try the folder
         if releaseName is None:
             folder = ek.ek(os.path.basename, dirName)
+
             if show_name_helpers.filterBadReleases(folder):
                 # NOTE: Multiple failed downloads will change the folder name. (e.g., appending #s)
                 # Should we handle that?
@@ -109,12 +224,12 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             process_result = False
             process_fail_message = ex(e)
 
-        returnStr += processor.log 
+        returnStr += processor.log
 
         returnStr += logHelper(u"Marking release as bad: " + releaseName)
         myDB = db.DBConnection('failed.db')
         myDB.select("INSERT INTO failed (release) VALUES (?)", [re.sub("[\.\-\ ]", "_", releaseName)])
- 
+
         if sickbeard.DELETE_FAILED and process_result:
             returnStr += logHelper(u"Deleting folder of failed download " + dirName, logger.DEBUG)
             try:
@@ -126,13 +241,13 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             returnStr += logHelper(u"Processing succeeded: ("+str(nzbName) + ", " + dirName + ")")
         else:
             returnStr += logHelper(u"Processing failed: (" + str(nzbName)  + ", " + dirName + "): "+process_fail_message, logger.WARNING)
-        return returnStr
+        return False
     if ek.ek(os.path.basename, dirName).startswith('_UNDERSIZED_'):
         returnStr += logHelper(u"The directory name indicates that it was previously rejected for being undersized, cancelling", logger.DEBUG)
-        return returnStr
+        return False
     elif ek.ek(os.path.basename, dirName).startswith('_UNPACK_'):
         returnStr += logHelper(u"The directory name indicates that this release is in the process of being unpacked, skipping", logger.DEBUG)
-        return returnStr
+        return False
 
     # make sure the dir isn't inside a show dir
     myDB = db.DBConnection()
@@ -140,86 +255,6 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
     for sqlShow in sqlResults:
         if dirName.lower().startswith(ek.ek(os.path.realpath, sqlShow["location"]).lower()+os.sep) or dirName.lower() == ek.ek(os.path.realpath, sqlShow["location"]).lower():
             returnStr += logHelper(u"You're trying to post process an episode that's already been moved to its show dir", logger.ERROR)
-            return returnStr
+            return False
 
-    fileList = ek.ek(os.listdir, dirName)
-
-    # split the list into video files and folders
-    folders = filter(lambda x: ek.ek(os.path.isdir, ek.ek(os.path.join, dirName, x)), fileList)
-    videoFiles = filter(helpers.isMediaFile, fileList)
-    _checkOrphanedProcessedFiles(dirName, fileList)
-
-    # recursively process all the folders
-    for curFolder in folders:
-        returnStr += logHelper(u"Recursively processing a folder: "+curFolder, logger.DEBUG)
-        returnStr += processDir(ek.ek(os.path.join, dirName, curFolder), recurse=True)
-
-    remainingFolders = filter(lambda x: ek.ek(os.path.isdir, ek.ek(os.path.join, dirName, x)), fileList)
-
-    # process any files in the dir
-    for cur_video_file_path in videoFiles:
-
-        cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file_path)
-
-# prevent infinite auto process loop when KEEP_PROCESSED_DIR = true, by marking videos as processed
-        if sickbeard.KEEP_PROCESSED_DIR:
-            # check if file has already been processed - a .processed file will exist
-            helper_file = helpers.replaceExtension(cur_video_file_path, "processed")
-
-            if ek.ek(os.path.isfile, helper_file):
-                logHelper(u"Processing skipped for " + cur_video_file_path + ": .processed file detected.")
-                continue
-
-        try:
-            processor = postProcessor.PostProcessor(cur_video_file_path, nzbName, failed=failed)
-            process_result = processor.process()
-            process_fail_message = ""
-        except exceptions.PostProcessingFailed, e:
-            process_result = False
-            process_fail_message = ex(e)
-
-        returnStr += processor.log 
-
-        # as long as the postprocessing was successful delete the old folder unless the config wants us not to
-        if process_result:
-
-            if len(videoFiles) == 1 and not sickbeard.KEEP_PROCESSED_DIR and \
-                ek.ek(os.path.normpath, dirName) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR) and \
-                len(remainingFolders) == 0:
-
-                returnStr += logHelper(u"Deleting folder " + dirName, logger.DEBUG)
-
-                try:
-                    shutil.rmtree(dirName)
-                except (OSError, IOError), e:
-                    returnStr += logHelper(u"Warning: unable to remove the folder " + dirName + ": " + ex(e), logger.WARNING)
-
-            returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
-            
-        else:
-            returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
-
-    return returnStr
-def _checkOrphanedProcessedFiles(baseDir, fileList):
-    processedFiles = filter(_isProcessedHelperFile, fileList)
-
-    # check for orphaned .processed files and delete them
-    for processedFile in processedFiles:
-        # get filename without extension
-        baseName = processedFile.rpartition(".")[0]
-
-        # search the file list for all the files starting with baseName
-        matches = [file for file in fileList if file.startswith(baseName)]
-
-        # if only one matches, this is the current .processed file and it is orphaned; so it can be deleted
-        if len(matches) == 1:
-            os.remove(ek.ek(os.path.join, baseDir, processedFile))
-
-def _isProcessedHelperFile(file):
-    sepFile = file.rpartition(".")
-
-    if sepFile[0] == "":
-        return False
-    else:
-        return sepFile[2] == "processed"
-        
+    return True

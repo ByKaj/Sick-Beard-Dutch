@@ -148,7 +148,9 @@ class NumericProviders (AddAirdateIndex):
                 7: 'ezrss',
                 8: 'thepiratebay',
                 9: 'dtt',
-                10: 'torrentleech' }
+                10: 'torrentleech',
+                11: 'kat',
+             }
                 
     def execute(self):
         self.connection.action("ALTER TABLE history RENAME TO history_old")
@@ -510,7 +512,7 @@ class AddSizeAndSceneNameFields(FixAirByDateSetting):
             ep_file_name = ek.ek(os.path.basename, cur_result["location"])
             ep_file_name = os.path.splitext(ep_file_name)[0]
             
-            # I only want to find real scene names here so anything with a space in it is out
+            # only want to find real scene names here so anything with a space in it is out
             if ' ' in ep_file_name:
                 continue
             
@@ -649,6 +651,8 @@ class Add1080pAndRawHDQualities(AddIMDbInfo):
         new_any = common.Quality.combineQualities([common.Quality.SDTV, common.Quality.SDDVD, common.Quality.HDTV, common.Quality.FULLHDTV, common.Quality.HDWEBDL, common.Quality.FULLHDWEBDL, common.Quality.HDBLURAY, common.Quality.FULLHDBLURAY, common.Quality.UNKNOWN], [])
 
         # update qualities (including templates)
+        logger.log(u"[1/4] Updating pre-defined templates and the quality for each show...", logger.MESSAGE)
+        ql = []
         shows = self.connection.select("SELECT * FROM tv_shows")
         for cur_show in shows:
             if cur_show["quality"] == old_hd:
@@ -657,34 +661,42 @@ class Add1080pAndRawHDQualities(AddIMDbInfo):
                 new_quality = new_any
             else:
                 new_quality = self._update_composite_qualities(cur_show["quality"])
-            self.connection.action("UPDATE tv_shows SET quality = ? WHERE show_id = ?", [new_quality, cur_show["show_id"]])
+            ql.append(["UPDATE tv_shows SET quality = ? WHERE show_id = ?", [new_quality, cur_show["show_id"]]])
+        self.connection.mass_action(ql)
 
         # update status that are are within the old hdwebdl (1<<3 which is 8) and better -- exclude unknown (1<<15 which is 32768)
         logger.log(u"[2/4] Updating the status for the episodes within each show...", logger.MESSAGE)
+        ql = []
         episodes = self.connection.select("SELECT * FROM tv_episodes WHERE status < 3276800 AND status >= 800")
         for cur_episode in episodes:
-            self.connection.action("UPDATE tv_episodes SET status = ? WHERE episode_id = ?", [self._update_status(cur_episode["status"]), cur_episode["episode_id"]])
+            ql.append(["UPDATE tv_episodes SET status = ? WHERE episode_id = ?", [self._update_status(cur_episode["status"]), cur_episode["episode_id"]]])
+        self.connection.mass_action(ql)
 
         # make two seperate passes through the history since snatched and downloaded (action & quality) may not always coordinate together
 
         # update previous history so it shows the correct action
         logger.log(u"[3/4] Updating history to reflect the correct action...", logger.MESSAGE)
+        ql = []
         historyAction = self.connection.select("SELECT * FROM history WHERE action < 3276800 AND action >= 800")
         for cur_entry in historyAction:
-            self.connection.action("UPDATE history SET action = ? WHERE showid = ? AND date = ?", [self._update_status(cur_entry["action"]), cur_entry["showid"], cur_entry["date"]])
+            ql.append(["UPDATE history SET action = ? WHERE showid = ? AND date = ?", [self._update_status(cur_entry["action"]), cur_entry["showid"], cur_entry["date"]]])
+        self.connection.mass_action(ql)
 
         # update previous history so it shows the correct quality
         logger.log(u"[4/4] Updating history to reflect the correct quality...", logger.MESSAGE)
+        ql = []
         historyQuality = self.connection.select("SELECT * FROM history WHERE quality < 32768 AND quality >= 8")
         for cur_entry in historyQuality:
-            self.connection.action("UPDATE history SET quality = ? WHERE showid = ? AND date = ?", [self._update_quality(cur_entry["quality"]), cur_entry["showid"], cur_entry["date"]])
+            ql.append(["UPDATE history SET quality = ? WHERE showid = ? AND date = ?", [self._update_quality(cur_entry["quality"]), cur_entry["showid"], cur_entry["date"]]])
+        self.connection.mass_action(ql)
 
         self.incDBVersion()
+
         # cleanup and reduce db if any previous data was removed
         logger.log(u"Performing a vacuum on the database.", logger.DEBUG)
         self.connection.action("VACUUM")
-        
-class AddProperNamingSupport(AddIMDbInfo):    
+                
+class AddProperNamingSupport(Add1080pAndRawHDQualities):    
     def test(self):
         return self.checkDBVersion() >= 15
 
@@ -692,10 +704,10 @@ class AddProperNamingSupport(AddIMDbInfo):
         self.addColumn("tv_episodes", "is_proper")
         self.incDBVersion()
 
-class AddEmailSubscriptionTable(FixAirByDateSetting):
+class AddEmailSubscriptionTable(AddProperNamingSupport):
     def test(self):
         return self.hasColumn("tv_shows", "notify_list")
-
+    
     def execute(self):
         self.addColumn('tv_shows', 'notify_list', 'TEXT', None)
         self.incDBVersion()

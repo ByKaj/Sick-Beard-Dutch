@@ -77,7 +77,7 @@ class TVShow(object):
         self.startyear = 0
         self.paused = 0
         self.air_by_date = 0
-        self.subtitles = int(sickbeard.SUBTITLES_DEFAULT)
+        self.subtitles = int(sickbeard.SUBTITLES_DEFAULT if sickbeard.SUBTITLES_DEFAULT else 0)
         self.lang = lang
 
         self.lock = threading.Lock()
@@ -1068,9 +1068,11 @@ class TVShow(object):
                 maxBestQuality = None
 
             epStatus, curQuality = Quality.splitCompositeStatus(epStatus)
-
+    
+            if epStatus in (SNATCHED, SNATCHED_PROPER):
+                return Overview.SNATCHED
             # if they don't want re-downloads then we call it good if they have anything
-            if maxBestQuality == None:
+            elif maxBestQuality == None:
                 return Overview.GOOD
             # if they have one but it's not the best they want then mark it as qual
             elif curQuality < maxBestQuality:
@@ -1078,7 +1080,7 @@ class TVShow(object):
             # if it's >= maxBestQuality then it's good
             else:
                 return Overview.GOOD
-
+            
 def dirty_setter(attr_name):
     def wrapper(self, val):
         if getattr(self, attr_name) != val:
@@ -1171,17 +1173,17 @@ class TVEpisode(object):
             return
 
         self.refreshSubtitles()
-        self.subtitles_searchcount = self.subtitles_searchcount + 1
+        self.subtitles_searchcount = self.subtitles_searchcount + 1 if self.subtitles_searchcount else 1 #added the if because sometime it raise an error
         self.subtitles_lastsearch = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.saveToDB()
         
         newsubtitles = set(self.subtitles).difference(set(previous_subtitles))
         
         if newsubtitles:
-            subtitleList = (subliminal.language.Language(x).name for x in newsubtitles)
-            logger.log(str(self.show.tvdbid) + ": Downloaded " + ", ".join(subtitleList) + " subtitles for episode " + str(self.season) + "x" + str(self.episode), logger.DEBUG)
+            subtitleList = ", ".join(subliminal.language.Language(x).name for x in newsubtitles)
+            logger.log(str(self.show.tvdbid) + ": Downloaded " + subtitleList + " subtitles for episode " + str(self.season) + "x" + str(self.episode), logger.DEBUG) 
             
-            notifiers.notify_subtitle_download(self.prettyName(), ", ".join(subtitleList))
+            notifiers.notify_subtitle_download(self.prettyName(), subtitleList)
 
         else:
             logger.log(str(self.show.tvdbid) + ": No subtitles downloaded for episode " + str(self.season) + "x" + str(self.episode), logger.DEBUG)
@@ -1190,10 +1192,8 @@ class TVEpisode(object):
             for video in subtitles:
                 for subtitle in subtitles.get(video):
                     history.logSubtitle(self.show.tvdbid, self.season, self.episode, self.status, subtitle)
-
         
         return subtitles
-
 
     def checkForMetaFiles(self):
 

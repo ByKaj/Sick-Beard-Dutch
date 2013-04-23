@@ -24,8 +24,10 @@ __all__ = ['ezrss',
            'thepiratebay',
            'dtt',
            'torrentleech',
+           'kat',
            'nzbx',
-           'iptorrents'
+           'iptorrents',
+           'omgwtfnzbs'
            ]
 
 import sickbeard
@@ -99,7 +101,7 @@ def makeNewznabProvider(configString):
     return newProvider
 
 def getDefaultNewznabProviders():
-    return 'Sick Beard Index|http://lolo.sickbeard.com/|0|0!!!NZBs.org|http://beta.nzbs.org/||0!!!NZBGeek|https://index.nzbgeek.info/||0!!!NZBFinder|http://www.nzbfinder.ws/||0!!!Usenet-Crawler|http://www.usenet-crawler.com/||0'
+    return 'Sick Beard Index|http://lolo.sickbeard.com/|0|0!!!NZBs.org|http://nzbs.org/||0!!!NZBGeek|https://index.nzbgeek.info/||0!!!NZBFinder|http://www.nzbfinder.ws/||0!!!Usenet-Crawler|http://www.usenet-crawler.com/||0'
 
 def getProviderModule(name):
     name = name.lower()
@@ -107,7 +109,7 @@ def getProviderModule(name):
     if name in __all__ and prefix+name in sys.modules:
         return sys.modules[prefix+name]
     else:
-        raise Exception("Can't find "+prefix+name+" in "+repr(sys.modules))
+        raise Exception("Can't find "+prefix+name+" in "+"Providers")
 
 def getProviderClass(id):
 

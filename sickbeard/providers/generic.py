@@ -105,8 +105,6 @@ class GenericProvider:
         if not headers:
             headers = []
 
-        result = None
-
         result = helpers.getURL(url, headers)
 
         if result is None:
@@ -187,7 +185,7 @@ class GenericProvider:
         Returns a Quality value obtained from the node's data 
         """
         (title, url) = self._get_title_and_url(item) #@UnusedVariable
-        quality = Quality.nameQuality(title)
+        quality = Quality.sceneQuality(title)
         return quality
 
     def _doSearch(self):
@@ -271,9 +269,7 @@ class GenericProvider:
             result.name = title
             result.quality = quality
             result.provider = self
-            result.content = self.getURL(result.url) \
-                            if self.providerType == GenericProvider.TORRENT \
-                            and not result.url.startswith('magnet') else None 
+            result.content = None 
             
             results.append(result)
 
@@ -349,9 +345,7 @@ class GenericProvider:
             result.name = title
             result.quality = quality
             result.provider = self
-            result.content = self.getURL(result.url) \
-                            if self.providerType == GenericProvider.TORRENT \
-                            and not result.url.startswith('magnet') else None 
+            result.content = None 
 
             if len(epObj) == 1:
                 epNum = epObj[0].episode

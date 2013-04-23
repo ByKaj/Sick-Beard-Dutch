@@ -49,7 +49,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         
         self.url = self.urls['base_url']
         
-        self.categories = "2,26,32"
+        self.categories = "2,26,27,32"
         
         self.session = None
 
@@ -61,7 +61,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
     
     def getQuality(self, item):
         
-        quality = Quality.nameQuality(item[0])
+        quality = Quality.sceneQuality(item[0])
         return quality    
 
     def _doLogin(self):
@@ -153,16 +153,16 @@ class TorrentLeechProvider(generic.TorrentProvider):
         
                 data = self.getURL(searchURL)
                 if not data:
-                    return []
+                    break
 
-                html = BeautifulSoup(data)
-                
                 try:
+                    html = BeautifulSoup(data)
+                    
                     torrent_table = html.find('table', attrs = {'id' : 'torrenttable'})
                     
                     if not torrent_table:
                         logger.log(u"No results found for: " + search_string + "(" + searchURL + ")", logger.DEBUG)
-                        return []
+                        break
 
                     for result in torrent_table.find_all('tr')[1:]:
 
@@ -177,8 +177,8 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
                         #Filter unseeded torrent
                         if seeders == 0 or not title \
-                        or not show_name_helpers.filterBadReleases(title):
-                            continue 
+                        or not download_url:
+                            continue
 
                         item = title, download_url, id, seeders, leechers
                         logger.log(u"Found result: " + title + "(" + searchURL + ")", logger.DEBUG)
@@ -228,6 +228,48 @@ class TorrentLeechCache(tvcache.TVCache):
 
         # only poll TorrentLeech every 20 minutes max
         self.minTime = 20
+
+    def updateCache(self):
+
+        if not self.shouldUpdate():
+            return
+
+        data = self._getData()
+
+        try: 
+            html = BeautifulSoup(data)
+            torrent_table = html.find('table', attrs = {'id' : 'torrenttable'})
+
+            if not torrent_table:
+                logger.log(u"The Data returned from " + self.provider.name + " is incomplete, this result is unusable", logger.ERROR)
+                return []
+
+            # now that we've loaded the current feed lets delete the old cache
+            logger.log(u"Clearing " + self.provider.name + " cache and updating with new information")
+            self.setLastUpdate()
+            self._clearCache()
+        
+            for result in torrent_table.find_all('tr')[1:]:
+
+                link = result.find('td', attrs = {'class' : 'name'}).find('a')
+                url = result.find('td', attrs = {'class' : 'quickdownload'}).find('a')
+                title = link.string
+                download_url = self.provider.urls['download'] % url['href']
+                id = int(link['href'].replace('/torrent/', ''))
+                seeders = int(result.find('td', attrs = {'class' : 'seeders'}).string)
+                leechers = int(result.find('td', attrs = {'class' : 'leechers'}).string)
+
+                #Filter torrent
+                if not title or not download_url:
+                    continue 
+
+                item = (title, download_url)
+                
+                self._parseItem(item)
+
+        except Exception, e:
+            logger.log(u"Failed to parsing " + self.provider.name + " RSS: " + ex(e), logger.ERROR)
+            return []
 
     def _getData(self):
        

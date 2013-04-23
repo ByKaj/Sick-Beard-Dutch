@@ -32,7 +32,6 @@ Sick Beard makes use of the following projects:
 * [python-dateutil][dateutil]
 * [jsonrpclib][jsonrpclib]
 * [Subliminal][subliminal]
-* [IMDbpy][imdbpy]
 
 ## Dependencies
 
@@ -57,4 +56,3 @@ If you find a bug please report it or it'll never get fixed. Verify that it hasn
 [googlenewissue]: http://code.google.com/p/sickbeard/issues/entry
 [jsonrpclib]: https://github.com/joshmarshall/jsonrpclib
 [subliminal]: https://github.com/Diaoul/subliminal
-[imdbpy]: https://github.com/alberanid/imdbpy

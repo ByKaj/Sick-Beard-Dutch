@@ -284,7 +284,6 @@ class NewznabCache(tvcache.TVCache):
     def _getRSSData(self):
 
         params = {"t": "tvsearch",
-                  "age": sickbeard.USENET_RETENTION,
                   #Cat: 5030 = SD, 5040 = HD (used global). nzb.su uses 5020 = foreign, 5050 = other, nzbs.org uses 5080 = foreign, 5060 = other
                   "cat": '5040,5030,5020,5050'}
 
