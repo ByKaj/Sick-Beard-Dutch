@@ -182,7 +182,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
     return returnStr
 
-def validateDir(path, dirName, returnStr, failed):
+def validateDir(path, dirName, returnStr):
 
     returnStr += logHelper(u"Processing folder "+dirName, logger.DEBUG)
 
