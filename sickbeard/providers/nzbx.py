@@ -57,7 +57,7 @@ class NzbXProvider(generic.NZBProvider):
     def _doSearch(self, search, show=None):
         params = {'age': sickbeard.USENET_RETENTION,
                   'completion': sickbeard.NZBX_COMPLETION,
-                  'cat': 'tv-hd|tv-sd',
+                  'cat': 'tv-hd|tv-sd|tv-foreign',
                   'limit': 250,
                   'q': search}
 
@@ -87,7 +87,7 @@ class NzbXProvider(generic.NZBProvider):
 
     def findPropers(self, date=None):
         params = {'completion': 100,
-                  'cat': 'tv-hd|tv-sd',
+                  'cat': 'tv-hd|tv-sd|tv-foreign',
                   'age': 4,
                   'q': '.proper.|.repack.'}
 
@@ -120,7 +120,7 @@ class NzbXCache(tvcache.TVCache):
     def _getRSSData(self):
         params = {'q': '',
                   'completion': sickbeard.NZBX_COMPLETION,
-                  'cat': 'tv-hd|tv-sd',
+                  'cat': 'tv-hd|tv-sd|tv-foreign',
                   'limit': 250}
 
         if not params['completion']:
