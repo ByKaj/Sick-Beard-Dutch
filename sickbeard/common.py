@@ -200,9 +200,9 @@ class Quality:
 
         checkName = lambda list, func: func([re.search(x, name, re.I) for x in list])
 
-        if checkName(["(pdtv|hdtv|dsr|tvrip|web[-.]?(dl|rip)).(xvid|x264|h.?264)"], all) and not checkName(["(720|1080)[pi]"], all):
+        if checkName(["((pd|hd)tv|dsr|tvrip|web?[-.\w\s]{1}?(dl|rip)).(xvid|[xh].?264)"], all) and not checkName(["(720|1080)[pi]"], all):
             return Quality.SDTV
-        elif checkName(["(dvdrip|bdrip)(.ws)?.(xvid|divx|h.?264|x264)"], any) and not checkName(["(720|1080)[pi]"], all):
+        elif checkName(["((dvd|bd)rip)(.ws)?.(xvid|divx|[xh].?264)"], any) and not checkName(["(720|1080)[pi]"], all):
             return Quality.SDDVD
         elif checkName(["720p", "hdtv", "[xh]\.?264"], all) or checkName(["hr.ws.pdtv.x264"], any) and not checkName(["(1080)[pi]"], all):          
             return Quality.HDTV                                                                        
@@ -210,9 +210,9 @@ class Quality:
             return Quality.RAWHDTV                                                                     
         elif checkName(["1080p", "hdtv", "[xh]\.?264"], all):         
             return Quality.FULLHDTV                                                                    
-        elif checkName(["720p", "web[-.]?(dl|rip)", "[xh]\.?264"], all) or checkName(["720p", "itunes", "[xh]\.?264"], all):
+        elif checkName(["720p", "web?[-.\w\s]{1}?(dl|rip)", "[xh]\.?264"], all) or checkName(["720p", "itunes", "[xh]\.?264"], all):
             return Quality.HDWEBDL                                                                     
-        elif checkName(["1080p", "web[-.]?(dl|rip)", "[xh]\.?264"], all) or checkName(["1080p", "itunes", "[xh]\.?264"], all):     
+        elif checkName(["1080p", "web?[-.\w\s]{1}?(dl|rip)", "[xh]\.?264"], all) or checkName(["1080p", "itunes", "[xh]\.?264"], all):
             return Quality.FULLHDWEBDL                                                                 
         elif checkName(["720p", "bluray|hddvd", "[xh]\.?264"], all):
             return Quality.HDBLURAY                                                                    
