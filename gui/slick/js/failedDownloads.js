@@ -57,6 +57,8 @@ $(document).ready(function(){
       lastClick = this;
     });
 
+  });
+
   $('#addFailedRelease').click(function(){
     releasename = $('#failedRelease').val()
     if (releasename) {
@@ -68,6 +70,4 @@ $(document).ready(function(){
 
   })
 
-});
-  
 });
