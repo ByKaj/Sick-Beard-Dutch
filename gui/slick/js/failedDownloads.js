@@ -57,6 +57,17 @@ $(document).ready(function(){
       lastClick = this;
     });
 
-  });
+  $('#addFailedRelease').click(function(){
+    releasename = $('#failedRelease').val()
+    if (releasename) {
+      url = sbRoot + '/manage/failedDownloads?add='+releasename
+      window.location.href = url
+    } else {
+      return false
+    }
+
+  })
+
+});
   
 });
