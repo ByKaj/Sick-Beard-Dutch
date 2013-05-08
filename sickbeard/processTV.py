@@ -20,23 +20,17 @@ from __future__ import with_statement
 
 import os
 import shutil
-import re
-
-from glob import glob
 
 import sickbeard
 from sickbeard import postProcessor
-from sickbeard import db, helpers, exceptions, show_name_helpers
+from sickbeard import db, helpers, exceptions
 
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
 
 from sickbeard import logger
 
-from sickbeard import ui, search_queue
-from sickbeard.common import WANTED, statusStrings
-
-from sickbeard import failed_history
+from sickbeard import failedProcessor
 
 from sickbeard.name_parser.parser import NameParser, InvalidNameException
 
@@ -48,7 +42,7 @@ def logHelper (logMessage, logLevel=logger.MESSAGE):
 def processDir (dirName, nzbName=None, recurse=False, failed=False):
     """
     Scans through the files in dirName and processes whatever media files it finds
-    
+
     dirName: The folder name to look in
     nzbName: The NZB name which resulted in this folder being downloaded
     recurse: Boolean for whether we should descend into subfolders or not
@@ -77,48 +71,15 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
         return returnStr
 
     if failed:
-        returnStr += logHelper(u"Failed download detected: (" + str(nzbName) + ", " + dirName + ")")
-        releaseName = None
-        if nzbName is not None:
-            returnStr += logHelper(u"Using nzbName for release name.")
-            releaseName = nzbName.rpartition('.')[0]
-        else:
-            # If not given nzbName, we first try to get the release name from nzb/nfo
-            returnStr += logHelper(u"No nzbName given. Trying to guess release name.")
-            fileTypes = ["*.nzb", "*.nfo"]
-            for search in fileTypes:
-                results = glob(dirName + "/" + search)
-                if len(results) == 1:
-                    foundFile = ek.ek(os.path.basename, results[0]).rpartition('.')[0]
-                    if show_name_helpers.filterBadReleases(foundFile):
-                        releaseName = foundFile
-                        returnStr += logHelper(u"Release name (" + releaseName + ") found from file (" + results[0] + ")")
-                        break
-        # If that fails, we try the folder
-        if releaseName is None:
-            folder = ek.ek(os.path.basename, dirName)
-            if show_name_helpers.filterBadReleases(folder):
-                # NOTE: Multiple failed downloads will change the folder name. (e.g., appending #s)
-                # Should we handle that?
-                releaseName = folder
-                returnStr += logHelper(u"Folder name (" + folder + ") appears to be a valid release name. Using it.")
-        # Otherwise, we abort.
-        if releaseName is None:
-            returnStr += logHelper(u"Unable to find a valid release name. Aborting.", logger.WARNING)
-            return returnStr
-
         try:
-            processor = postProcessor.PostProcessor(dirName, nzbName, failed=failed, folder=True)
+            processor = failedProcessor.FailedProcessor(dirName, nzbName)
             process_result = processor.process()
             process_fail_message = ""
-        except exceptions.PostProcessingFailed, e:
+        except exceptions.FailedProcessingFailed, e:
             process_result = False
             process_fail_message = ex(e)
 
         returnStr += processor.log 
-
-        returnStr += logHelper(u"Marking release as bad: " + releaseName)
-        failed_history.logFailed(releaseName)
 
         if sickbeard.DELETE_FAILED and process_result:
             returnStr += logHelper(u"Deleting folder of failed download " + dirName, logger.DEBUG)
@@ -128,10 +89,10 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
                 returnStr += logHelper(u"Warning: Unable to remove the failed folder " + dirName + ": " + ex(e), logger.WARNING)
 
         if process_result:
-            returnStr += logHelper(u"Processing succeeded: ("+str(nzbName) + ", " + dirName + ")")
+            returnStr += logHelper(u"Processing succeeded: (" + str(nzbName) + ", " + dirName + ")")
         else:
-            returnStr += logHelper(u"Processing failed: (" + str(nzbName)  + ", " + dirName + "): "+process_fail_message, logger.WARNING)
-        return returnStr
+            returnStr += logHelper(u"Processing failed: (" + str(nzbName) + ", " + dirName + "): " + process_fail_message, logger.WARNING)
+            return returnStr
     	
     if dirName == sickbeard.TV_DOWNLOAD_DIR and not nzbName: #Scheduled Post Processing Active
         #Get at first all the subdir in the dirName
@@ -150,7 +111,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
     videoFiles = filter(helpers.isMediaFile, files)
 
     # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
-    if nzbName != None and len(videoFiles) >= 2:
+    if nzbName is not None and len(videoFiles) >= 2:
         nzbName = None
 
     returnStr += logHelper(u"PostProcessing Path: " + path, logger.DEBUG)
@@ -164,7 +125,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
         cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file)
 
         try:
-            processor = postProcessor.PostProcessor(cur_video_file_path, nzbName, failed=failed)
+            processor = postProcessor.PostProcessor(cur_video_file_path, nzbName)
             process_result = processor.process()
             process_fail_message = ""
         except exceptions.PostProcessingFailed, e:
@@ -175,6 +136,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
         if process_result:
                 returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
+
         else:
             returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
 
