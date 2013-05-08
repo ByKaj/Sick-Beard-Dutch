@@ -23,6 +23,7 @@ import os
 import re
 import shlex
 import subprocess
+import stat
 
 import sickbeard
 
@@ -141,7 +142,7 @@ class PostProcessor(object):
             self._log(u"File " + existing_file + " doesn't exist so there's no worries about replacing it", logger.DEBUG)
             return PostProcessor.DOESNT_EXIST
 
-    def _list_associated_files(self, file_path):
+    def _list_associated_files(self, file_path, subtitles_only=False):
         """
         For a given file path searches for files with the same name but different extension and returns their absolute paths
 
@@ -153,9 +154,14 @@ class PostProcessor(object):
         if not file_path:
             return []
 
+       if file_path != self.file_path:
+            associated_dir = os.path.dirname(file_path)
+            associated_fname = os.path.basename(self.file_path)
+            file_path = os.path.join(associated_dir, associated_fname)
+
         file_path_list = []
 
-        base_name = file_path.rpartition('.')[0] + '.'
+        base_name = file_path.rpartition('.')[0]+'.'
 
         # don't strip it all and use cwd by accident
         if not base_name:
@@ -202,6 +208,16 @@ class PostProcessor(object):
         for cur_file in file_list:
             self._log(u"Deleting file " + cur_file, logger.DEBUG)
             if ek.ek(os.path.isfile, cur_file):
+                #check first the read-only attribute
+                file_attribute = ek.ek(os.stat, cur_file)[0]
+                if (not file_attribute & stat.S_IWRITE):
+                    # File is read-only, so make it writeable
+                    self._log('Read only mode on file ' + cur_file + ' Will try to make it writeable', logger.DEBUG)
+                    try:
+                        ek.ek(os.chmod,cur_file,stat.S_IWRITE)
+                    except:
+                        self._log(u'Cannot change permissions of ' + cur_file, logger.WARNING)
+
                 ek.ek(os.remove, cur_file)
                 # do the library update for synoindex
                 notifiers.synoindex_notifier.deleteFile(cur_file)
@@ -225,6 +241,8 @@ class PostProcessor(object):
         file_list = [file_path]
         if associated_files:
             file_list = file_list + self._list_associated_files(file_path)
+        elif subtitles:
+            file_list = file_list + self._list_associated_files(file_path, True)
 
         if not file_list:
             self._log(u"There were no files associated with " + file_path + ", not moving anything", logger.DEBUG)
@@ -711,18 +729,6 @@ class PostProcessor(object):
 
         return False
 
-    def _get_release_name(self):
-        cur_release_name = None
-        if self.good_results[self.NZB_NAME]:
-            cur_release_name = self.nzb_name
-            if cur_release_name.lower().endswith('.nzb'):
-                cur_release_name = cur_release_name.rpartition('.')[0]
-        elif self.good_results[self.FOLDER_NAME]:
-            cur_release_name = self.folder_name
-        elif self.good_results[self.FILE_NAME]:
-            cur_release_name = self.file_name
-        return cur_release_name
-
     def process(self):
         """
         Post-process a given file
@@ -876,9 +882,6 @@ class PostProcessor(object):
             # move the episode and associated files to the show dir
             if sickbeard.KEEP_PROCESSED_DIR:
                 self._copy(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES, sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
-            # create an empty helper file to indicate that this video has been processed
-                helper_file = helpers.replaceExtension(self.file_path, "processed")
-                open(helper_file, 'w')
             else:
                 self._move(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES, sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
         except (OSError, IOError):
@@ -894,7 +897,7 @@ class PostProcessor(object):
         history.logDownload(ep_obj, self.file_path, new_ep_quality, self.release_group)
 
         # send notifications
-        notifiers.notify_download(ep_obj.prettyName())
+        notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
 
         # generate nfo/tbn
         ep_obj.createMetaFiles()
