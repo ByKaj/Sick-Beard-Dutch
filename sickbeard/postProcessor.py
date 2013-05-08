@@ -168,8 +168,10 @@ class PostProcessor(object):
             # only add associated to list
             if associated_file_path == file_path:
                 continue
-            # only list it if the only non-shared part is the extension
-            if '.' in associated_file_path[len(base_name):]:
+            # only list it if the only non-shared part is the extension or if it is a subtitle
+            if '.' in associated_file_path[len(base_name):] and not associated_file_path[len(associated_file_path)-3:] in common.subtitleExtensions:
+                continue
+            if subtitles_only and not associated_file_path[len(associated_file_path)-3:] in common.subtitleExtensions:
                 continue
 
             file_path_list.append(associated_file_path)
@@ -204,7 +206,7 @@ class PostProcessor(object):
                 # do the library update for synoindex
                 notifiers.synoindex_notifier.deleteFile(cur_file)
 
-    def _combined_file_operation(self, file_path, new_path, new_base_name, associated_files=False, action=None):
+    def _combined_file_operation (self, file_path, new_path, new_base_name, associated_files=False, action=None, subtitles=False):
         """
         Performs a generic operation (move or copy) on a file. Can rename the file as well as change its location,
         and optionally move associated files too.
@@ -236,6 +238,12 @@ class PostProcessor(object):
             # get the extension
             cur_extension = cur_file_path.rpartition('.')[-1]
 
+            # check if file have language of subtitles
+            if cur_extension in common.subtitleExtensions:
+                cur_lang = cur_file_path.rpartition('.')[0].rpartition('.')[-1]
+                if cur_lang in sickbeard.SUBTITLES_LANGUAGES:
+                    cur_extension = cur_lang + '.' + cur_extension
+
             # replace .nfo with .nfo-orig to avoid conflicts
             if cur_extension == 'nfo':
                 cur_extension = 'nfo-orig'
@@ -247,11 +255,20 @@ class PostProcessor(object):
             else:
                 new_file_name = helpers.replaceExtension(cur_file_name, cur_extension)
 
-            new_file_path = ek.ek(os.path.join, new_path, new_file_name)
+            if sickbeard.SUBTITLES_DIR and cur_extension in common.subtitleExtensions:
+                subs_new_path = ek.ek(os.path.join, new_path, sickbeard.SUBTITLES_DIR)
+                dir_exists = helpers.makeDir(subs_new_path)
+                if not dir_exists:
+                    logger.log(u"Unable to create subtitles folder "+subs_new_path, logger.ERROR)
+                else:
+                    helpers.chmodAsParent(subs_new_path)
+                new_file_path = ek.ek(os.path.join, subs_new_path, new_file_name)
+            else:
+                new_file_path = ek.ek(os.path.join, new_path, new_file_name)
 
             action(cur_file_path, new_file_path)
 
-    def _move(self, file_path, new_path, new_base_name, associated_files=False):
+    def _move(self, file_path, new_path, new_base_name, associated_files=False, subtitles=False):
         """
         file_path: The full path of the media file to move
         new_path: Destination path where we want to move the file to
@@ -269,9 +286,9 @@ class PostProcessor(object):
                 self._log("Unable to move file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
                 raise e
 
-        self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_move)
+        self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_move, subtitles=subtitles)
 
-    def _copy(self, file_path, new_path, new_base_name, associated_files=False):
+    def _copy(self, file_path, new_path, new_base_name, associated_files=False, subtitles=False):
         """
         file_path: The full path of the media file to copy
         new_path: Destination path where we want to copy the file to
@@ -289,7 +306,7 @@ class PostProcessor(object):
                 logger.log(u"Unable to copy file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
                 raise e
 
-        self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_copy)
+        self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_copy, subtitles=subtitles)
 
     def _history_lookup(self):
         """
@@ -479,7 +496,7 @@ class PostProcessor(object):
                         lambda: self._analyze_name(self.file_path),
 
                         # try to analyze the dir + file name together as one name
-                        lambda: self._analyze_name(self.folder_name + u' ' + self.file_name)
+                        lambda: self._analyze_name(self.folder_name + u' ' + str(self.file_name))
 
                         ]
 
@@ -627,7 +644,7 @@ class PostProcessor(object):
                 continue
 
             ep_quality = common.Quality.nameQuality(cur_name)
-            self._log(u"Looking up quality for name " + cur_name + u", got " + common.Quality.qualityStrings[ep_quality], logger.DEBUG)
+            self._log(u"Looking up quality for name "+cur_name+u", got "+common.Quality.qualityStrings[ep_quality], logger.DEBUG)
 
             # if we find a good one then use it
             if ep_quality != common.Quality.UNKNOWN:
@@ -635,11 +652,12 @@ class PostProcessor(object):
                 return ep_quality
 
         # if we didn't get a quality from one of the names above, try assuming from each of the names
-        ep_quality = common.Quality.assumeQuality(self.file_name)
-        self._log(u"Guessing quality for name " + self.file_name + u", got " + common.Quality.qualityStrings[ep_quality], logger.DEBUG)
-        if ep_quality != common.Quality.UNKNOWN:
-            logger.log(self.file_name + u" looks like it has quality " + common.Quality.qualityStrings[ep_quality] + ", using that", logger.DEBUG)
-            return ep_quality
+        if self.file_name:
+            ep_quality = common.Quality.assumeQuality(self.file_name)
+            self._log(u"Guessing quality for name " + self.file_name + u", got " + common.Quality.qualityStrings[ep_quality], logger.DEBUG)
+            if ep_quality != common.Quality.UNKNOWN:
+                logger.log(self.file_name + u" looks like it has quality " + common.Quality.qualityStrings[ep_quality] + ", using that", logger.DEBUG)
+                return ep_quality
 
         return ep_quality
 
@@ -655,8 +673,8 @@ class PostProcessor(object):
             script_cmd = shlex.split(curScriptName) + [ep_obj.location, self.file_path, str(ep_obj.show.tvdbid), str(ep_obj.season), str(ep_obj.episode), str(ep_obj.airdate)]
 
             # use subprocess to run the command and capture output
-            self._log(u"Executing command " + str(script_cmd))
-            self._log(u"Absolute path to script: " + ek.ek(os.path.abspath, script_cmd[0]), logger.DEBUG)
+            self._log(u"Executing command "+str(script_cmd))
+            self._log(u"Absolute path to script: "+ek.ek(os.path.abspath, script_cmd[0]), logger.DEBUG)
             try:
                 p = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=sickbeard.PROG_DIR)
                 out, err = p.communicate() #@UnusedVariable
@@ -692,6 +710,18 @@ class PostProcessor(object):
             return True
 
         return False
+
+    def _get_release_name(self):
+        cur_release_name = None
+        if self.good_results[self.NZB_NAME]:
+            cur_release_name = self.nzb_name
+            if cur_release_name.lower().endswith('.nzb'):
+                cur_release_name = cur_release_name.rpartition('.')[0]
+        elif self.good_results[self.FOLDER_NAME]:
+            cur_release_name = self.folder_name
+        elif self.good_results[self.FILE_NAME]:
+            cur_release_name = self.file_name
+        return cur_release_name
 
     def process(self):
         """
@@ -845,9 +875,12 @@ class PostProcessor(object):
         try:
             # move the episode and associated files to the show dir
             if sickbeard.KEEP_PROCESSED_DIR:
-                self._copy(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES)
+                self._copy(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES, sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
+            # create an empty helper file to indicate that this video has been processed
+                helper_file = helpers.replaceExtension(self.file_path, "processed")
+                open(helper_file, 'w')
             else:
-                self._move(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES)
+                self._move(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES, sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
 
