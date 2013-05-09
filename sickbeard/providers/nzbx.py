@@ -18,18 +18,16 @@
 
 import urllib
 import generic
+from datetime import datetime
+import json
+
 import sickbeard
 
 from sickbeard import tvcache
 from sickbeard import logger
 from sickbeard import classes
 from sickbeard import show_name_helpers
-from datetime import datetime
-
-try:
-    import json
-except ImportError:
-    from lib import simplejson as json
+from lib.unidecode import unidecode
 
 
 class NzbXProvider(generic.NZBProvider):
@@ -50,7 +48,7 @@ class NzbXProvider(generic.NZBProvider):
         return [x for x in show_name_helpers.makeSceneSearchString(ep_obj)]
 
     def _get_title_and_url(self, item):
-        title = item['name']
+        title = unidecode(item['name'])
         url = self.url + 'nzb?' + str(item['guid']) + '*|*' + urllib.quote_plus(title)
         return (title, url)
 
