@@ -22,7 +22,6 @@ from datetime import datetime
 import json
 
 import sickbeard
-
 from sickbeard import tvcache
 from sickbeard import logger
 from sickbeard import classes
