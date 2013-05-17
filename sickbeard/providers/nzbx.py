@@ -96,19 +96,6 @@ class NzbXCache(tvcache.TVCache):
         tvcache.TVCache.__init__(self, provider)
         self.minTime = 20
 
-    def _getRSSData(self):
-        params = {'q': '',
-                  'completion': sickbeard.NZBX_COMPLETION,
-                  'cat': 'tv-hd|tv-sd|tv-foreign',
-                  'limit': 250}
-
-        if not params['completion']:
-            params['completion'] = 100
-
-        url = self.provider.url + 'api/sickbeard?' + urllib.urlencode(params)
-        logger.log(u"nzbX cache update URL: " + url, logger.DEBUG)
-        return self.provider.getURL(url)
-
     def _parseItem(self, item):
         title, url = self.provider._get_title_and_url(item)
         logger.log(u"Adding item from RSS to cache: " + title, logger.DEBUG)
@@ -117,6 +104,7 @@ class NzbXCache(tvcache.TVCache):
     def updateCache(self):
         if not self.shouldUpdate():
             return
+
         items = self.provider._doSearch('')
         if not items:
             return
