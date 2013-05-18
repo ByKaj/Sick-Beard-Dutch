@@ -17,11 +17,11 @@
 
 from __future__ import with_statement
 
-import logger
 import os
 from glob import glob
 
 import sickbeard
+from sickbeard import logger
 from sickbeard import exceptions
 from sickbeard import show_name_helpers
 from sickbeard import helpers
@@ -60,7 +60,7 @@ class FailedProcessor(object):
         parser = NameParser(False)
         try:
             parsed = parser.parse(releaseName)
-        except InvalidNameException as e:
+        except InvalidNameException:
             self._log(u"Error: release name is invalid: " + releaseName, logger.WARNING)
             raise exceptions.FailedProcessingFailed()
 
@@ -84,14 +84,13 @@ class FailedProcessor(object):
             self._log(u"Could not create show object. Either the show hasn't been added to SickBeard, or it's still loading (if SB was restarted recently)", logger.WARNING)
             raise exceptions.FailedProcessingFailed()
 
+        self._log(u"Marking release as bad: " + releaseName)
+        failed_history.logFailed(releaseName)
+
         self._revert_episode_statuses(parsed.season_number, parsed.episode_numbers)
 
         cur_backlog_queue_item = search_queue.BacklogQueueItem(self._show_obj, parsed.season_number)
-
         sickbeard.searchQueueScheduler.action.add_item(cur_backlog_queue_item)
-
-        self._log(u"Marking release as bad: " + releaseName)
-        failed_history.logFailed(releaseName)
 
         return True
 

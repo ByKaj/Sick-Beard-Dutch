@@ -92,7 +92,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             returnStr += logHelper(u"Processing succeeded: (" + str(nzbName) + ", " + dirName + ")")
         else:
             returnStr += logHelper(u"Processing failed: (" + str(nzbName) + ", " + dirName + "): " + process_fail_message, logger.WARNING)
-            return returnStr
+        return returnStr
     	
     if dirName == sickbeard.TV_DOWNLOAD_DIR and not nzbName: #Scheduled Post Processing Active
         #Get at first all the subdir in the dirName
