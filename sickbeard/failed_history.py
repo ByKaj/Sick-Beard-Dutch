@@ -25,6 +25,9 @@ def prepareFailedName(release):
     """Standardizes release name for failed DB"""
 
     fixed = urllib.unquote(release)
+    if(fixed.endswith(".nzb")):
+        fixed = fixed.rpartition(".")[0]
+
     fixed = re.sub("[\.\-\+\ ]", "_", fixed)
     return fixed
 
