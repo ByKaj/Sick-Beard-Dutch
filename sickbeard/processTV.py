@@ -109,6 +109,10 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
     videoFiles = filter(helpers.isMediaFile, files)
 
+    # Check for orphaned helper files for keeping track of processed state
+    if sickbeard.KEEP_PROCESSED_DIR:
+        removeOrphanedProcessedHelperFiles(dirName, files)
+
     # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
     if nzbName is not None and len(videoFiles) >= 2:
         nzbName = None
@@ -123,6 +127,11 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
         cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file)
 
+        # prevent infinite auto process loop when KEEP_PROCESSED_DIR = true, by marking videos as processed
+        if sickbeard.KEEP_PROCESSED_DIR and hasProcessedHelperFile(cur_video_file_path):
+            logHelper(u"Processing skipped for " + cur_video_file_path + ": .processed file detected.")
+            continue
+
         try:
             processor = postProcessor.PostProcessor(cur_video_file_path, nzbName)
             process_result = processor.process()
@@ -134,7 +143,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
         returnStr += processor.log
 
         if process_result:
-                returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
+            returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
 
         else:
             returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
@@ -149,6 +158,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             videoFiles = filter(helpers.isMediaFile, fileList)
             notwantedFiles = [x for x in fileList if x not in videoFiles]
 
+
             # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
             if nzbName != None and len(videoFiles) >= 2:
                 nzbName = None
@@ -156,6 +166,11 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             for cur_video_file in videoFiles:
 
                 cur_video_file_path = ek.ek(os.path.join, processPath, cur_video_file)
+
+                # prevent infinite auto process loop when KEEP_PROCESSED_DIR = true, by marking videos as processed
+                if sickbeard.KEEP_PROCESSED_DIR and hasProcessedHelperFile(cur_video_file_path):
+                    logHelper(u"Processing skipped for " + cur_video_file_path + ": .processed file detected.")
+                    continue
 
                 try:
                     processor = postProcessor.PostProcessor(cur_video_file_path, nzbName)
@@ -175,6 +190,10 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
                 #If something fail abort the processing on dir
                 if not process_result:
                     break
+
+            # Check for orphaned helper files for keeping track of processed state
+            if sickbeard.KEEP_PROCESSED_DIR:
+                removeOrphanedProcessedHelperFiles(processDir, fileList)
 
             #Delete all file not needed
             for cur_file in notwantedFiles:
@@ -242,4 +261,36 @@ def validateDir(path, dirName, returnStr):
         except InvalidNameException:
             pass
 
+    return False
+
+# Check and remove, .processed helper files that have no accompanying files anymore
+def removeOrphanedProcessedHelperFiles(baseDir, fileList):
+    processedFiles = filter(isProcessedHelperFile, fileList)
+
+    for processedFile in processedFiles:
+        # get filename without extension
+        baseName = processedFile.rpartition(".")[0]
+
+        # search the file list for all the files starting with baseName
+        matches = [file for file in fileList if file.startswith(baseName)]
+
+        # if only one matches, this is the current .processed file and it is orphaned; so it can be deleted
+        if len(matches) == 1:
+            os.remove(ek.ek(os.path.join, baseDir, processedFile))
+
+# Check if a file is a .processed helper file
+def isProcessedHelperFile(file):
+    sepFile = file.rpartition(".")
+
+    if sepFile[0] == "":
+        return False
+    else:
+        return sepFile[2] == "processed"
+
+# Check if a video file has a .processed helper file (so we can skip the video)
+def hasProcessedHelperFile(file):
+    # check if file has already been processed - an empty helper file will exist
+    helper_file = helpers.replaceExtension(file, "processed")
+    if ek.ek(os.path.isfile, helper_file):
+        return True
     return False
