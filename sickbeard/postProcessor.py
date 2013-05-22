@@ -62,7 +62,7 @@ class PostProcessor(object):
     FOLDER_NAME = 2
     FILE_NAME = 3
 
-    def __init__(self, file_path, nzb_name=None):
+    def __init__(self, file_path, nzb_name = None):
         """
         Creates a new post processor with the given file path and optionally an NZB name.
 
@@ -153,11 +153,6 @@ class PostProcessor(object):
 
         if not file_path:
             return []
-
-#        if file_path != self.file_path:
-#            associated_dir = os.path.dirname(file_path)
-#            associated_fname = os.path.basename(self.file_path)
-#            file_path = os.path.join(associated_dir, associated_fname)
 
         file_path_list = []
 
@@ -304,7 +299,7 @@ class PostProcessor(object):
                 helpers.chmodAsParent(new_file_path)
             except (IOError, OSError), e:
                 self._log("Unable to move file " + cur_file_path + " to " + new_file_path + ": " + ex(e), logger.ERROR)
-                raise e
+                raise ex(str(e))
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_move, subtitles=subtitles)
 
@@ -316,7 +311,7 @@ class PostProcessor(object):
         associated_files: Boolean, whether we should copy similarly-named files too
         """
 
-        def _int_copy(cur_file_path, new_file_path):
+        def _int_copy (cur_file_path, new_file_path):
 
             self._log(u"Copying file from " + cur_file_path + " to " + new_file_path, logger.DEBUG)
             try:
@@ -516,7 +511,7 @@ class PostProcessor(object):
                         lambda: self._analyze_name(self.file_path),
 
                         # try to analyze the dir + file name together as one name
-                        lambda: self._analyze_name(self.folder_name + u' ' + str(self.file_name))
+                        lambda: self._analyze_name(self.folder_name + u' ' + self.file_name)
 
                         ]
 
@@ -672,12 +667,11 @@ class PostProcessor(object):
                 return ep_quality
 
         # if we didn't get a quality from one of the names above, try assuming from each of the names
-        if self.file_name:
-            ep_quality = common.Quality.assumeQuality(self.file_name)
-            self._log(u"Guessing quality for name " + self.file_name + u", got " + common.Quality.qualityStrings[ep_quality], logger.DEBUG)
-            if ep_quality != common.Quality.UNKNOWN:
-                logger.log(self.file_name + u" looks like it has quality " + common.Quality.qualityStrings[ep_quality] + ", using that", logger.DEBUG)
-                return ep_quality
+        ep_quality = common.Quality.assumeQuality(self.file_name)
+        self._log(u"Guessing quality for name " + self.file_name + u", got " + common.Quality.qualityStrings[ep_quality], logger.DEBUG)
+        if ep_quality != common.Quality.UNKNOWN:
+            logger.log(self.file_name + u" looks like it has quality " + common.Quality.qualityStrings[ep_quality] + ", using that", logger.DEBUG)
+            return ep_quality
 
         return ep_quality
 
