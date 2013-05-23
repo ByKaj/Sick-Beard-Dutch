@@ -152,15 +152,14 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
         if process_result:
             returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
-
         else:
             returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
 
     #Process Video File in all TV Subdir
     for dir in [x for x in dirs if validateDir(path, x, returnStr)]:
-
+        
         process_result = True
-
+        
         for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dir), topdown=False):
 
             videoFiles = filter(helpers.isMediaFile, fileList)
@@ -259,7 +258,6 @@ def validateDir(path, dirName, returnStr):
             return False
 
     # Get the videofile list for the next checks
-
     files = ek.ek(os.listdir, os.path.join(path, dirName))
     videoFiles = filter(helpers.isMediaFile, files)
 
@@ -271,7 +269,6 @@ def validateDir(path, dirName, returnStr):
             return False
  
     #check if the dir have at least one tv video file
-    
     for video in videoFiles:
         try:
             NameParser().parse(video)
