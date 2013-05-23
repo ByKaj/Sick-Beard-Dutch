@@ -7,7 +7,7 @@ python:
 # whitelist
 branches:
   only:
-    - dutch-tpb
+    - dutch-pistachitos
 
 before_script: cd ./tests
 script: ./all_tests.py
