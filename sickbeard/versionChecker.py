@@ -40,7 +40,9 @@ class CheckVersion():
         self.install_type = self.find_install_type()
 
         if self.install_type == 'win':
-            self.updater = WindowsUpdateManager()
+            # FIXME: Windows builds?
+            # self.updater = WindowsUpdateManager()
+            self.updater = None
         elif self.install_type == 'git':
             self.updater = GitUpdateManager()
         elif self.install_type == 'source':
@@ -294,11 +296,11 @@ class GitUpdateManager(UpdateManager):
         branch_info = self._run_git('symbolic-ref -q HEAD')
 
         if not branch_info or not branch_info[0]:
-            return 'dutch-tpb'
+            return 'dutch-pistachitos'
 
         branch = branch_info[0].strip().replace('refs/heads/', '', 1)
 
-        return branch or 'dutch-tpb'
+        return branch or 'dutch-pistachitos'
 
 
     def _check_github_for_update(self):
@@ -333,7 +335,7 @@ class GitUpdateManager(UpdateManager):
 
         # if we're up to date then don't set this
         if self._num_commits_behind == 100:
-            message = "or else you're ahead of ThePirateBay-Dutch fork"
+            message = "or else you're ahead of Dutch-Pistachitos fork"
 
         elif self._num_commits_behind > 0:
             message = "you're %d commit" % self._num_commits_behind
