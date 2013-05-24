@@ -13,9 +13,6 @@ failed.db*
 
 #  SB Test Related   #
 ######################
-tests/Logs/*
-tests/sickbeard.*
-tests/cache.db
 .travis.yml
 sickbeard/version.py
 sickbeard/versionChecker.py
@@ -40,11 +37,11 @@ Session.vim
 
 # OS generated files #
 ######################
+.DS_Store
+.DS_Store?
+._*
 .Spotlight-V100
 .Trashes
-.DS_Store
-desktop.ini
+Icon?
 ehthumbs.db
 Thumbs.db
-.directory
-*~
