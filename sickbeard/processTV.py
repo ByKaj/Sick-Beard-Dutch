@@ -95,7 +95,14 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
         return returnStr
 
-    if ek.ek(os.path.basename, dirName).startswith('_UNDERSIZED_'):
+    # Check for orphaned helper files for keeping track of processed state
+    if sickbeard.KEEP_PROCESSED_DIR:
+        removeOrphanedProcessedHelperFiles(dirName, files)
+
+    if ek.ek(os.path.basename, dirName).startswith('_FAILED_'):
+        returnStr += logHelper(u"The directory name indicates it failed to extract, cancelling", logger.DEBUG)
+        return returnStr
+    elif ek.ek(os.path.basename, dirName).startswith('_UNDERSIZED_'):
         returnStr += logHelper(u"The directory name indicates that it was previously rejected for being undersized, cancelling", logger.DEBUG)
         return returnStr
     elif ek.ek(os.path.basename, dirName).startswith('_UNPACK_'):
