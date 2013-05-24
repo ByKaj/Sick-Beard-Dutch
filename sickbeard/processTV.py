@@ -95,10 +95,6 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
         return returnStr
 
-    # Check for orphaned helper files for keeping track of processed state
-    if sickbeard.KEEP_PROCESSED_DIR:
-        removeOrphanedProcessedHelperFiles(dirName, files)
-
     if ek.ek(os.path.basename, dirName).startswith('_FAILED_'):
         returnStr += logHelper(u"The directory name indicates it failed to extract, cancelling", logger.DEBUG)
         return returnStr
@@ -119,13 +115,16 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
     fileList = ek.ek(os.listdir, dirName)
 
+    # Check for orphaned helper files for keeping track of processed state
+    if sickbeard.KEEP_PROCESSED_DIR:
+        removeOrphanedProcessedHelperFiles(dirName, fileList)
+
     # split the list into video files and folders
     folders = filter(lambda x: ek.ek(os.path.isdir, ek.ek(os.path.join, dirName, x)), fileList)
     videoFiles = filter(helpers.isMediaFile, fileList)
 
     # recursively process all the folders
     for curFolder in folders:
-
         returnStr += logHelper(u"Recursively processing a folder: "+curFolder, logger.DEBUG)
         returnStr += processDir(ek.ek(os.path.join, dirName, curFolder), recurse=True)
 
