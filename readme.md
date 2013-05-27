@@ -25,7 +25,7 @@ Note: Use nzbToMedia post-processing scripts for better integration. https://git
 - Custom Scan and Process interval
 - Custom Subtitle Search interval
 - Modified Scene Exceptions focused on Dutch users
-- Different color for Snateched releases.
+- Different color for Snatched releases.
 - Minor (bug)fixes on SB/Gui.
 - And stuff I forgot
 
