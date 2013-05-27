@@ -22,6 +22,7 @@ Extra's on Dutch Edition:
 - Failed download handling support based on Tolstyak's work. https://github.com/Tolstyak/Sick-Beard
 Note: Use nzbToMedia post-processing scripts for better integration. https://github.com/clinton-hall/nzbToMedia
 - NL Series Support (Newznab providers, nzbX)
+- Language default to NL for new show/importing existing shows (if available on TVDB)
 - Custom Scan and Process interval
 - Custom Subtitle Search interval
 - Modified Scene Exceptions focused on Dutch users
