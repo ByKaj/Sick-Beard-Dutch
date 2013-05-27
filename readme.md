@@ -1,5 +1,34 @@
-Sick Beard
+Sick Beard Dutch Edition
 =====
+
+This fork is based on mr-orange ThePirateBay branch
+https://github.com/mr-orange/Sick-Beard
+
+Feature list of his branch:
+- More Torrent Provider: TPB-DTT-TL-IP + all other provider (usenet/torrent) in master
+- Magnet Link & .torrent Private Tracker handling 
+- Client Support for uTorrent/Transmission/Deluge (rtorrent magnet handling via hack)
+- Full TV Season Search handling for TPB Provider
+- Proxy use for TPB & untrusted user filtering
+- Nicer Gui with thumbnail support (Poster/Banner)
+- Multi Language subtitle management
+- 1080p Qualities support (thanks to Zoggy)
+- Imdb use for other usefull info
+- Traktv Watchlist Integration (courtesy of EchelonFour)
+- Personal SceneName exceptions Handling 
+- AutoUpdate tv on Start & Ignore Words setting on gui
+
+Extra's on Dutch Edition:
+- Failed download handling support based on Tolstyak's work. https://github.com/Tolstyak/Sick-Beard
+Note: Use nzbToMedia post-processing scripts for better integration. https://github.com/clinton-hall/nzbToMedia
+- NL Series Support (Newznab providers, nzbX)
+- Language default to NL for new show/importing existing shows (if available on TVDB)
+- Custom Scan and Process interval
+- Custom Subtitle Search interval
+- Modified Scene Exceptions focused on Dutch users
+- Different color for Snatched releases.
+- Minor (bug)fixes on SB/Gui.
+- And stuff I forgot
 
 *Sick Beard is currently an alpha release. There may be severe bugs in it and at any given time it may not work at all.*
 
