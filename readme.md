@@ -25,6 +25,8 @@ Note: Use nzbToMedia post-processing scripts for better integration. https://git
 - Language default to NL for new show/importing existing shows (if available on TVDB)
 - Custom Scan and Process interval
 - Custom Subtitle Search interval
+- Prevent infinite post processing with Keep Original Files enabled and Scan and Process
+- Change post processing option from copy/move files upon finishing DL to also allow creating physical and symbolic links.
 - Modified Scene Exceptions focused on Dutch users
 - Different color for Snatched releases.
 - Minor (bug)fixes on SB/Gui.
