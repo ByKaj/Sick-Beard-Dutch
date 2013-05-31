@@ -40,7 +40,6 @@ from sickbeard import db
 from sickbeard import encodingKludge as ek
 from sickbeard import notifiers
 
-from lib.linktastic import linktastic
 from lib.tvdb_api import tvdb_api, tvdb_exceptions
 
 import xml.etree.cElementTree as etree
