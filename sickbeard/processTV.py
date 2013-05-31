@@ -159,6 +159,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
             if processPath == dirName:
                 videoFiles = []
+
             # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
             if nzbName != None and len(videoFiles) >= 2:
                 nzbName = None
@@ -211,7 +212,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
                 returnStr += processor.log
 
-            if not sickbeard.KEEP_PROCESSED_DIR and \
+            if sickbeard.PROCESS_METHOD == "move" and \
             ek.ek(os.path.normpath, processPath) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR):
 
                 if not ek.ek(os.listdir, processPath) == []:

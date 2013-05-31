@@ -918,6 +918,7 @@ class PostProcessor(object):
                 # create an empty helper file to indicate that this video has been processed
                 helper_file = helpers.replaceExtension(self.file_path, "processed")
                 open(helper_file, 'w')
+
             elif sickbeard.PROCESS_METHOD == "move":
                 self._move(self.file_path, dest_path, new_base_name, sickbeard.MOVE_ASSOCIATED_FILES, sickbeard.USE_SUBTITLES and ep_obj.show.subtitles)
             elif sickbeard.PROCESS_METHOD == "hardlink":
@@ -927,6 +928,7 @@ class PostProcessor(object):
             else:
               logger.log(u"Unknown process method: " + sickbeard.PROCESS_METHOD, logger.ERROR)
               raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
+
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
 
