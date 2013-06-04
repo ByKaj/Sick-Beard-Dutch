@@ -69,6 +69,32 @@
                         
                         <div class="field-pair">
                             <label class="nocheck clearfix">
+                                <span class="component-title">Preferred Words</span>
+                                <input type="text" name="prefer_words" value="$sickbeard.PREFER_WORDS" size="45" />
+                            </label>
+                            <label class="nocheck clearfix">
+                                <span class="component-title">&nbsp;</span>
+                                <span class="component-desc">These words will give the releases a higher score.</span>
+                            </label>
+                        </div>
+
+                        <div class="field-pair">
+                            <label class="nocheck clearfix">
+                                <span class="component-title">Required Words</span>
+                                <input type="text" name="require_words" placeholder="Example: DTS, AC3 & English"value="$sickbeard.REQUIRE_WORDS" size="45" />
+                            </label>
+                            <label class="nocheck clearfix">
+                                <span class="component-title">&nbsp;</span>
+                                <span class="component-desc">A release should contain at least one set of words.</span>
+                            </label>
+                            <label class="nocheck clearfix">
+                                <span class="component-title">&nbsp;</span>
+                                <span class="component-desc">Sets are separated by "," and each word within a set must be separated with "&"</span>
+                            </label>
+                        </div>
+
+                        <div class="field-pair">
+                            <label class="nocheck clearfix">
                                 <span class="component-title">Ignore Words</span>
                                 <input type="text" name="ignore_words" value="$sickbeard.IGNORE_WORDS" size="45" />
                             </label>

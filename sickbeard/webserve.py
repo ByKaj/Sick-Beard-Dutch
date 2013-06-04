@@ -983,7 +983,7 @@ class ConfigSearch:
                        sab_apikey=None, sab_category=None, sab_host=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
                        nzb_method=None, torrent_method=None, usenet_retention=None, search_frequency=None, download_propers=None, allow_high_priority=None,
                        torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None, torrent_label=None, torrent_path=None, 
-                       torrent_ratio=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None):
+                       torrent_ratio=None, torrent_paused=None, torrent_high_bandwidth=None, prefer_words=None, require_words=None, ignore_words=None):
 
         results = []
 
@@ -1018,6 +1018,12 @@ class ConfigSearch:
         if usenet_retention == None:
             usenet_retention = 200
 
+        if prefer_words == None:
+            prefer_words = ""
+
+        if require_words == None:
+            require_words = ""
+
         if ignore_words == None:
             ignore_words = ""
 
@@ -1027,7 +1033,9 @@ class ConfigSearch:
         sickbeard.NZB_METHOD = nzb_method
         sickbeard.TORRENT_METHOD = torrent_method
         sickbeard.USENET_RETENTION = int(usenet_retention)
-        
+
+        sickbeard.PREFER_WORDS = prefer_words
+        sickbeard.REQUIRE_WORDS = require_words        
         sickbeard.IGNORE_WORDS = ignore_words
         
         sickbeard.DOWNLOAD_PROPERS = download_propers
