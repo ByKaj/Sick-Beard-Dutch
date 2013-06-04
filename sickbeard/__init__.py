@@ -822,7 +822,7 @@ def initialize(consoleLogging=True):
 
         GIT_PATH = check_setting_str(CFG, 'General', 'git_path', '')
 
-        PREFER_WORDS = check_setting_str(CFG, 'General', 'prefer_words', PREEFR_WORDS)
+        PREFER_WORDS = check_setting_str(CFG, 'General', 'prefer_words', PREFER_WORDS)
         REQUIRE_WORDS = check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS)
         IGNORE_WORDS = check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS)
 
