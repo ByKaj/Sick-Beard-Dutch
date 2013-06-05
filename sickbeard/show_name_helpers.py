@@ -70,6 +70,15 @@ def filterBadReleases(name):
             logger.log(u"Invalid scene release: "+name+" contains "+x+", ignoring it", logger.DEBUG)
             return False
 
+    # if any of the required strings are in the name then say ok
+    for x in resultFilters + sickbeard.REQUIRE_WORDS.split(','):
+        if re.search('(^|[\W_])'+x+'($|[\W_])', check_string, re.I):
+            logger.log(u"Valid scene release: "+name+" contains "+x+" required word(s)", logger.DEBUG)
+            return True
+        else
+            logger.log(u"Invalid scene release: "+name+" contains "+x+" no required word(s)", logger.DEBUG)
+            return False
+
     return True
 
 def sceneToNormalShowNames(name):
