@@ -67,18 +67,21 @@ def filterBadReleases(name):
     # if any of the bad strings are in the name then say no
     for x in resultFilters + sickbeard.IGNORE_WORDS.split(','):
         if re.search('(^|[\W_])'+x+'($|[\W_])', check_string, re.I):
-            logger.log(u"Invalid scene release: "+name+" contains "+x+", ignoring it", logger.DEBUG)
+            logger.log(u"Invalid scene release: "+name+" contains ignore word "+x+", ignoring it", logger.DEBUG)
             return False
 
     # if any of the required strings are in the name then say ok
     for x in resultFilters + sickbeard.REQUIRE_WORDS.split(','):
-        if re.search('(^|[\W_])'+x+'($|[\W_])', check_string, re.I):
-            logger.log(u"Valid scene release: "+name+" contains "+x+" required word(s)", logger.DEBUG)
-            return True
-        else
-            logger.log(u"Invalid scene release: "+name+" contains "+x+" no required word(s)", logger.DEBUG)
+        if not re.search('(^|[\W_])'+x+'($|[\W_])', check_string, re.I):
+            logger.log(u"Invalid scene release: "+name+" contains no required word(s), ignoring it", logger.DEBUG)
             return False
 
+    # if any of the preferred strings are in the name then say ok else say ok also
+    for x in resultFilters + sickbeard.PREFER_WORDS.split(','):
+        if re.search('(^|[\W_])'+x+'($|[\W_])', check_string, re.I):
+            logger.log(u"Valid scene release: "+name+" contains preferred word "+x+", allowing it", logger.DEBUG)
+            return True
+                 		
     return True
 
 def sceneToNormalShowNames(name):
