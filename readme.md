@@ -29,6 +29,7 @@ Note: Use nzbToMedia post-processing scripts for better integration. https://git
 - Change post processing option from copy/move files upon finishing DL to also allow creating physical and symbolic links.
 - Modified Scene Exceptions focused on Dutch users
 - Different color for Snatched releases.
+- Increased support for seeding torrents after rename. https://github.com/mr-orange/Sick-Beard/pull/208 (for now keep settings in Post Processing - Process Episode Method set to move until i have figured out how to use it. In theory you could skip hardlinking etc in nzbToMedia scripts)
 - Minor (bug)fixes on SB/Gui.
 - And stuff I forgot
 
