@@ -153,8 +153,13 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
         
         for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dir), topdown=False):
 
+            #TODO ADD some other checking
+
             videoFiles = filter(helpers.isMediaFile, fileList)
             notwantedFiles = [x for x in fileList if x not in videoFiles]
+            # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
+            if processPath == dirName:
+                videoFiles = []
 
             # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
             if processPath == dirName:
@@ -261,7 +266,6 @@ def validateDir(path, dirName, returnStr):
         if int(numPostProcFiles[0][0]) == len(videoFiles):
             returnStr += logHelper(u"You're trying to post process a dir that's already been processed, skipping", logger.DEBUG)
             return False
- 
     return True
 
 # Check and remove, .processed helper files that have no accompanying files anymore
