@@ -321,6 +321,7 @@ class PostProcessor(object):
 
         self._combined_file_operation(file_path, new_path, new_base_name, associated_files, action=_int_copy, subtitles=subtitles)
 
+
     def _hardlink(self, file_path, new_path, new_base_name, associated_files=False, subtitles=False):
         """
         file_path: The full path of the media file to move
@@ -928,7 +929,6 @@ class PostProcessor(object):
             else:
               logger.log(u"Unknown process method: " + sickbeard.PROCESS_METHOD, logger.ERROR)
               raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
-
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
 
