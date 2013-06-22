@@ -225,6 +225,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
                     continue
 
                 returnStr += logHelper(u"Deleting folder " + processPath, logger.DEBUG)
+                returnStr += logHelper(u"Processing succeeded for "+cur_video_file_path)
 
                 try:
                     shutil.rmtree(processPath)
