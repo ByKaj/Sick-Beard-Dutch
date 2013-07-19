@@ -23,7 +23,7 @@ import shutil
 
 import sickbeard
 from sickbeard import postProcessor
-from sickbeard import db, helpers, exceptions
+from sickbeard import db, helpers, exceptions, show_name_helpers
 
 from sickbeard import encodingKludge as ek
 from sickbeard.exceptions import ex
@@ -31,6 +31,7 @@ from sickbeard.exceptions import ex
 from sickbeard import logger
 
 from sickbeard import failedProcessor
+from sickbeard import failed_history
 
 from sickbeard.name_parser.parser import NameParser, InvalidNameException
 
@@ -93,6 +94,14 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
         else:
             returnStr += logHelper(u"Processing failed: (" + str(nzbName) + ", " + dirName + "): " + process_fail_message, logger.WARNING)
         return returnStr
+# Keep it in case we need it for manual failed download PP. Just drop old
+# records as part of the monthly purge.
+#    else:
+#        release = show_name_helpers.determineReleaseName(dirName, nzbName)
+#        if release is not None:
+#            failed_history.downloadSucceeded(release)
+#        else:
+#            returnStr += logHelper(u"Couldn't find release name to remove download from failed history.", logger.WARNING)
 
     if dirName == sickbeard.TV_DOWNLOAD_DIR and not nzbName: #Scheduled Post Processing Active
         #Get at first all the subdir in the dirName

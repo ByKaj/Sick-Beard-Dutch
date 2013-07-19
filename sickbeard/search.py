@@ -143,6 +143,7 @@ def snatchEpisode(result, endStatus=SNATCHED):
         return False
 
     history.logSnatch(result)
+    failed_history.logSnatch(result)
 
     # don't notify when we re-download an episode
     for curEpObj in result.episodes:
@@ -155,6 +156,7 @@ def snatchEpisode(result, endStatus=SNATCHED):
 
     return True
 
+# Used by RSSSearchQueueItem
 def searchForNeededEpisodes():
 
     logger.log(u"Searching all providers for any needed episodes")
@@ -224,7 +226,7 @@ def pickBestResult(results, quality_list=None):
             continue
 
         if cur_result.provider.providerType != GenericProvider.TORRENT:
-            if failed_history.hasFailed(cur_result.name):
+            if failed_history.hasFailed(cur_result.name, cur_result.size):
                 logger.log(cur_result.name + u" has previously failed, rejecting it")
                 continue
 
@@ -280,7 +282,7 @@ def isFinalResult(result):
     else:
         return False
 
-
+# Used by ManualSearchQueueItem
 def findEpisode(episode, manualSearch=False):
 
     logger.log(u"Searching for " + episode.prettyName())
@@ -330,6 +332,7 @@ def findEpisode(episode, manualSearch=False):
 
     return bestResult
 
+# Used by BacklogQueueItem
 def findSeason(show, season):
 
     logger.log(u"Searching for stuff we need from "+show.name+" season "+str(season))

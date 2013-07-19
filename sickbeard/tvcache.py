@@ -18,7 +18,6 @@
 
 import time
 import datetime
-import sqlite3
 
 import sickbeard
 
@@ -43,23 +42,24 @@ class CacheDBConnection(db.DBConnection):
     def __init__(self, providerName):
         db.DBConnection.__init__(self, "cache.db")
 
-        # Create the table if it's not already there
-        try:
-            sql = "CREATE TABLE "+providerName+" (name TEXT, season NUMERIC, episodes TEXT, tvrid NUMERIC, tvdbid NUMERIC, url TEXT, time NUMERIC, quality TEXT);"
-            self.connection.execute(sql)
-            self.connection.commit()
-        except sqlite3.OperationalError, e:
-            if str(e) != "table "+providerName+" already exists":
-                raise
+        # Create the tables if they're not already there
+        sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+        providerNameTest = self.action(sql, [providerName]).fetchall()
+        lastUpdateTest = self.action(sql, ["lastUpdate"]).fetchall()
+        if len(providerNameTest) == 0:
+            logger.log(u"Creating cache table for " + providerName)
+            sql = "CREATE TABLE " + providerName + " (name TEXT, season NUMERIC, episodes TEXT, tvrid NUMERIC, tvdbid NUMERIC, url TEXT, time NUMERIC, quality TEXT, size INT);"
+            self.action(sql)
 
-        # Create the table if it's not already there
-        try:
+        if len(lastUpdateTest) == 0:
+            logger.log(u"Creating cache lastUpdate table")
             sql = "CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);"
-            self.connection.execute(sql)
-            self.connection.commit()
-        except sqlite3.OperationalError, e:
-            if str(e) != "table lastUpdate already exists":
-                raise
+            self.action(sql)
+
+        # lazy upgrade
+        if "size" not in self.tableInfo(providerName):
+            logger.log(u"Upgrading cache table %s: adding size" % providerName)
+            self.action("ALTER TABLE %s ADD size INT" % providerName)
 
 class TVCache():
 
@@ -135,17 +135,24 @@ class TVCache():
         title = helpers.get_xml_text(item.getElementsByTagName('title')[0])
         url = helpers.get_xml_text(item.getElementsByTagName('link')[0])
 
-        self._checkItemAuth(title, url)
+        attrs = item.getElementsByTagName('newznab:attr')
+        try:
+            size = next(x.getAttribute('value') for x in attrs if x.getAttribute('name') == 'size')
+            size = int(size)
+        except StopIteration:
+            logger.log(u"RSS did not contain size", logger.DEBUG)
+            logger.log(u"Provider: " + self.provider.getID(), logger.DEBUG)
+            logger.log(u"Attrs: " + str(attrs), logger.DEBUG)
+            #logger.log(u"Data: " + item.toprettyxml(), logger.DEBUG)
+            size = -1
 
         if not title or not url:
             logger.log(u"The XML returned from the "+self.provider.name+" feed is incomplete, this result is unusable", logger.ERROR)
             return
 
-        url = self._translateLinkURL(url)
+        logger.log(u"Adding item from RSS to cache: %s (%s, %d)" % (title, url, size), logger.DEBUG)
 
-        logger.log(u"Adding item from RSS to cache: "+title, logger.DEBUG)
-
-        self._addCacheEntry(title, url)
+        self._addCacheEntry(title, url, size=size)
 
     def _getLastUpdate(self):
         myDB = self._getDB()
@@ -178,7 +185,7 @@ class TVCache():
 
         return True
 
-    def _addCacheEntry(self, name, url, season=None, episodes=None, tvdb_id=0, tvrage_id=0, quality=None, extraNames=[]):
+    def _addCacheEntry(self, name, url, season=None, episodes=None, tvdb_id=0, tvrage_id=0, quality=None, extraNames=[], size=-1):
 
         myDB = self._getDB()
 
@@ -310,7 +317,7 @@ class TVCache():
             quality = Quality.sceneQuality(name)
 
         myDB.action("INSERT INTO "+self.providerID+" (name, season, episodes, tvrid, tvdbid, url, time, quality) VALUES (?,?,?,?,?,?,?,?)",
-                    [name, season, episodeText, tvrage_id, tvdb_id, url, curTimestamp, quality])
+                    [name, season, episodeText, tvrage_id, tvdb_id, url, curTimestamp, quality, size])
 
 
     def searchCache(self, episode, manualSearch=False):
@@ -378,6 +385,7 @@ class TVCache():
                 # build a result object
                 title = curResult["name"]
                 url = curResult["url"]
+                size = curResult["size"]
 
                 logger.log(u"Found result " + title + " at " + url)
 
@@ -385,6 +393,7 @@ class TVCache():
                 result.url = url
                 result.name = title
                 result.quality = curQuality
+                result.size = size
                 result.content = self.provider.getURL(url) \
                             if self.provider.providerType == sickbeard.providers.generic.GenericProvider.TORRENT \
                             and not url.startswith('magnet') else None

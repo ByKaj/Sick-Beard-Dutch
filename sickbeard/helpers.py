@@ -771,7 +771,7 @@ if __name__ == '__main__':
 def get_xml_text(node):
     text = ""
     for child_node in node.childNodes:
-        if child_node.nodeType in (Node.CDATA_SECTION_NODE, Node.TEXT_NODE):
+        if child_node.nodeType in (Node.CDATA_SECTION_NODE, Node.TEXT_NODE, Node.ELEMENT_NODE):
             text += child_node.data
     return text.strip()
 

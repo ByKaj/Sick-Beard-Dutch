@@ -34,3 +34,21 @@ class InitialSchema(db.SchemaUpgrade):
                 self.connection.action(query[0])
             else:
                 self.connection.action(query[0], query[1:])
+
+class SizeAndProvider(InitialSchema):
+    def test(self):
+        return self.hasColumn("failed", "size") and self.hasColumn("failed", "provider")
+
+    def execute(self):
+        self.addColumn("failed", "size")
+        self.addColumn("failed", "provider", "TEXT", '')
+
+
+class History(SizeAndProvider):
+    """Snatch history that can't be modified by the user"""
+    def test(self):
+        return self.hasTable("history")
+
+    def execute(self):
+        self.connection.action("CREATE TABLE history (date NUMERIC, " +
+                               "size NUMERIC, release TEXT, provider TEXT);")

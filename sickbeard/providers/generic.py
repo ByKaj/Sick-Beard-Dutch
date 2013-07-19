@@ -184,7 +184,7 @@ class GenericProvider:
         
         Returns a Quality value obtained from the node's data 
         """
-        (title, url) = self._get_title_and_url(item) #@UnusedVariable
+        (title, url) = self._get_title_and_url(item)
         quality = Quality.sceneQuality(title)
         return quality
 
@@ -215,6 +215,27 @@ class GenericProvider:
         
         return (title, url)
     
+    def _get_size(self, item):
+        """Gets the size from the newznab:attr if available
+        non-newznab providers should override this"""
+
+        attrs = item.getElementsByTagName('newznab:attr')
+        try:
+            size = next(x.getAttribute('value') for x in attrs if x.getAttribute('name') == 'size')
+            size = int(size)
+        except StopIteration:
+            logger.log(u"RSS did not contain size", logger.DEBUG)
+            logger.log(u"Provider: " + self.provider.getID(), logger.DEBUG)
+            logger.log(u"Attrs: " + str(attrs), logger.DEBUG)
+            #logger.log(u"Data: " + item.toprettyxml(), logger.DEBUG)
+            size = -1
+
+        return size
+
+    def searchRSS(self):
+        self.cache.updateCache()
+        return self.cache.findNeededEpisodes()
+
     def findEpisode(self, episode, manualSearch=False):
 
         self._checkAuth()
@@ -286,6 +307,7 @@ class GenericProvider:
         for item in itemList:
 
             (title, url) = self._get_title_and_url(item)
+            size = self._get_size(item)
 
             quality = self.getQuality(item)
 
@@ -344,6 +366,7 @@ class GenericProvider:
             result.url = url
             result.name = title
             result.quality = quality
+            result.size = size
             result.provider = self
             result.content = None 
 
