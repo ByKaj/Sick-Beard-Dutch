@@ -466,6 +466,9 @@ def findSeason(show, season):
         for multiResult in foundResults[MULTI_EP_RESULT]:
 
             logger.log(u"Seeing if we want to bother with multi-episode result "+multiResult.name, logger.DEBUG)
+            if failed_history.hasFailed(multiResult.name, multiResult.size):
+                logger.log(multiResult.name + u" has previously failed, rejecting this multi-ep result")
+                continue
 
             # see how many of the eps that this result covers aren't covered by single results
             neededEps = []
