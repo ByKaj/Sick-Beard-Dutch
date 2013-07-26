@@ -705,7 +705,7 @@ def fixSetGroupID(childPath):
         except OSError:
             logger.log(u"Failed to respect the set-group-ID bit on the parent directory for %s (setting group ID %i)" % (childPath, parentGID), logger.ERROR)
 
-def sanitizeSceneName (name, ezrss=False):
+def sanitizeSceneName(name, ezrss=False):
     """
     Takes a show name and returns the "scenified" version of it.
     

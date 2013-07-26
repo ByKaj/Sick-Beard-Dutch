@@ -24,6 +24,7 @@ from glob import glob
 
 import sickbeard
 from sickbeard.common import countryList
+from sickbeard.helpers import sanitizeSceneName
 from sickbeard import scene_exceptions
 from sickbeard import helpers
 from sickbeard import logger

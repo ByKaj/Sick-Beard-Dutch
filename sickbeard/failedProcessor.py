@@ -50,7 +50,7 @@ class FailedProcessor(object):
 
         releaseName = self._get_release_name()
         if releaseName is None:
-        releaseName = show_name_helpers.determineReleaseName(self.dir_name, self.nzb_name)
+            releaseName = show_name_helpers.determineReleaseName(self.dir_name, self.nzb_name)
             raise exceptions.FailedProcessingFailed()
 
         parser = NameParser(False)
