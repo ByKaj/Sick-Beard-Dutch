@@ -57,11 +57,14 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     def _get_title_and_url(self, item):
         return (item['release'], item['getnzb'])
 
+    def _get_size(self, item):
+        return item['sizebytes']
+
     def _doSearch(self, search, show=None, retention=0):
         params = {'user': sickbeard.OMGWTFNZBS_UID,
                   'api': sickbeard.OMGWTFNZBS_KEY,
                   'eng': 1,
-                  'catid': '19,20', # SD,HD
+                  'catid': '19,20',  # SD,HD
                   'retention': sickbeard.USENET_RETENTION,
                   'search': search}
 
@@ -114,7 +117,7 @@ class OmgwtfnzbsCache(tvcache.TVCache):
         params = {'user': sickbeard.OMGWTFNZBS_UID,
                   'api': sickbeard.OMGWTFNZBS_KEY,
                   'eng': 1,
-                  'catid': '19,20'} # SD,HD
+                  'catid': '19,20'}  # SD,HD
 
         url = 'http://rss.omgwtfnzbs.org/rss-download.php?' + urllib.urlencode(params)
         logger.log(u"omgwtfnzbs cache update URL: " + url, logger.DEBUG)
