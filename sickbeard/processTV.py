@@ -118,7 +118,7 @@ def _processNormal(dirName, nzbName, recurse=False):
 
             returnStr += logHelper(u"Processing succeeded for " + cur_video_file_path)
 
-        return returnStr
+    return returnStr
 
 
 
