@@ -318,13 +318,19 @@ def validateDir(path, dirName, returnStr):
         returnStr += logHelper(u"The directory name indicates that this release is in the process of being unpacked, skipping", logger.DEBUG)
         return False
 
-    # make sure the dir isn't inside a show dir
-    myDB = db.DBConnection()
-    sqlResults = myDB.select("SELECT * FROM tv_shows")
-    for sqlShow in sqlResults:
-        if dirName.lower().startswith(ek.ek(os.path.realpath, sqlShow["location"]).lower()+os.sep) or dirName.lower() == ek.ek(os.path.realpath, sqlShow["location"]).lower():
-            returnStr += logHelper(u"You're trying to post process an episode that's already been moved to its show dir", logger.ERROR)
-            return False
+    # finally, process
+    if failed:
+        returnStr += _processFailed(dirName, nzbName)
+    else:
+        # make sure the dir isn't inside a show dir
+        myDB = db.DBConnection()
+        sqlResults = myDB.select("SELECT * FROM tv_shows")
+        for sqlShow in sqlResults:
+            if dirName.lower().startswith(ek.ek(os.path.realpath, sqlShow["location"]).lower()+os.sep) or dirName.lower() == ek.ek(os.path.realpath, sqlShow["location"]).lower():
+                returnStr += logHelper(u"You're trying to post process an episode that's already been moved to its show dir", logger.ERROR)
+                return returnStr
+
+        returnStr += _processNormal(dirName, nzbName)
 
     # Get the videofile list for the next checks
     files = ek.ek(os.listdir, os.path.join(path, dirName))
