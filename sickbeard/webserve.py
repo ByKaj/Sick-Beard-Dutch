@@ -29,7 +29,7 @@ import random
 import locale
 
 from Cheetah.Template import Template
-import cherrypy.lib
+import cherrypy
 
 import sickbeard
 
@@ -751,6 +751,9 @@ class Manage:
 
         for release in toRemove:
             myDB.action('DELETE FROM failed WHERE release = ?', [release])
+
+        if toRemove or add:
+            raise cherrypy.HTTPRedirect('/manage/failedDownloads/')
 
         if limit == "0":
             sqlResults = myDB.select("SELECT * FROM failed")
