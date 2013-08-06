@@ -158,14 +158,6 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             videoFiles = filter(helpers.isMediaFile, fileList)
             notwantedFiles = [x for x in fileList if x not in videoFiles]
 
-#            # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
-#            if processPath == dirName:
-#                videoFiles = []
-
-            # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
-            if processPath == dirName:
-                videoFiles = []
-
             # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
             if nzbName != None and len(videoFiles) >= 2:
                 nzbName = None
@@ -259,8 +251,9 @@ def validateDir(path, dirName, returnStr):
             return False
 
     # Get the videofile list for the next checks
-    files = ek.ek(os.listdir, os.path.join(path, dirName))
-    videoFiles = filter(helpers.isMediaFile, files)
+    videoFiles = []
+    for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dirName)):
+        videoFiles += filter(helpers.isMediaFile, fileList)
 
     # Avoid processing the same dir again if we use KEEP_PROCESSING_DIR    
     if sickbeard.KEEP_PROCESSED_DIR:
@@ -310,3 +303,4 @@ def hasProcessedHelperFile(file):
     if ek.ek(os.path.isfile, helper_file):
         return True
     
+    return False
