@@ -158,14 +158,6 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             videoFiles = filter(helpers.isMediaFile, fileList)
             notwantedFiles = [x for x in fileList if x not in videoFiles]
 
-#            # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
-#            if processPath == dirName:
-#                videoFiles = []
-
-            # Do not process video files in root directory a second time (copies and symbolic/physical links may remain).
-            if processPath == dirName:
-                videoFiles = []
-
             # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
             if nzbName != None and len(videoFiles) >= 2:
                 nzbName = None
@@ -259,8 +251,9 @@ def validateDir(path, dirName, returnStr):
             return False
 
     # Get the videofile list for the next checks
-    files = ek.ek(os.listdir, os.path.join(path, dirName))
-    videoFiles = filter(helpers.isMediaFile, files)
+    videoFiles = []
+    for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dirName)):
+        videoFiles += filter(helpers.isMediaFile, fileList)
 
     # Avoid processing the same dir again if we use KEEP_PROCESSING_DIR    
     if sickbeard.KEEP_PROCESSED_DIR:
@@ -268,7 +261,16 @@ def validateDir(path, dirName, returnStr):
         if int(numPostProcFiles[0][0]) == len(videoFiles):
             returnStr += logHelper(u"You're trying to post process a dir that's already been processed, skipping", logger.DEBUG)
             return False
-    return True
+
+    #check if the dir have at least one tv video file
+    for video in videoFiles:
+        try:
+            NameParser().parse(video)
+            return True
+        except InvalidNameException:
+            pass
+    
+    return False
 
 # Check and remove, .processed helper files that have no accompanying files anymore
 def removeOrphanedProcessedHelperFiles(baseDir, fileList):
@@ -300,4 +302,5 @@ def hasProcessedHelperFile(file):
     helper_file = helpers.replaceExtension(file, "processed")
     if ek.ek(os.path.isfile, helper_file):
         return True
+    
     return False
