@@ -104,6 +104,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             dirs = []
             files = [os.path.join(dirName, nzbName)]
         else:
+            dirs = [dirs]
             files = []
 
     process_result = False
