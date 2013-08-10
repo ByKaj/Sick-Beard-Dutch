@@ -101,10 +101,11 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
     else:
         path, dirs = ek.ek(os.path.split, dirName) #Script Post Processing
         if not nzbName is None and not nzbName.endswith('.nzb') and os.path.isfile(os.path.join(dirName, nzbName)): #For single torrent file without Dir
-            dirs = []
             files = [os.path.join(dirName, nzbName)]
+            dirs = []
         else:
-            files = []
+            files = ek.ek(os.listdir, dirName)
+            dirs = [dirs]
 
     process_result = False
     videoFiles = filter(helpers.isMediaFile, files)
