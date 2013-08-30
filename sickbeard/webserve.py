@@ -27,6 +27,7 @@ import threading
 import datetime
 import random
 import locale
+import logging
 
 from Cheetah.Template import Template
 import cherrypy.lib
@@ -829,7 +830,7 @@ class ConfigGeneral:
         sickbeard.ROOT_DIRS = rootDirString
     
     @cherrypy.expose
-    def saveAddShowDefaults(self, defaultFlattenFolders, defaultStatus, anyQualities, bestQualities, subtitles):
+    def saveAddShowDefaults(self, defaultFlattenFolders, defaultStatus, anyQualities, bestQualities, subtitles=False):
 
         if anyQualities:
             anyQualities = anyQualities.split(',')
@@ -980,10 +981,10 @@ class ConfigSearch:
 
     @cherrypy.expose
     def saveSearch(self, use_nzbs=None, use_torrents=None, nzb_dir=None, sab_username=None, sab_password=None,
-                       sab_apikey=None, sab_category=None, sab_host=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
-                       nzb_method=None, torrent_method=None, usenet_retention=None, search_frequency=None, download_propers=None, allow_high_priority=None,
-                       torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None, torrent_label=None, torrent_path=None, 
-                       torrent_ratio=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None):
+                    sab_apikey=None, sab_category=None, sab_host=None, nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
+                    nzb_method=None, torrent_method=None, usenet_retention=None, search_frequency=None, download_propers=None, allow_high_priority=None,
+                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None, torrent_label=None, torrent_path=None, 
+                    torrent_ratio=None, torrent_paused=None, torrent_high_bandwidth=None, ignore_words=None):
 
         results = []
 
@@ -1051,6 +1052,7 @@ class ConfigSearch:
 
         sickbeard.SAB_HOST = sab_host
 
+        sickbeard.NZBGET_USERNAME = nzbget_username
         sickbeard.NZBGET_PASSWORD = nzbget_password
         sickbeard.NZBGET_CATEGORY = nzbget_category
         sickbeard.NZBGET_HOST = nzbget_host
@@ -1102,8 +1104,8 @@ class ConfigPostProcessing:
 
     @cherrypy.expose
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
-                    xbmc_data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None, mede8er_data=None,
-                    use_banner=None, keep_processed_dir=None, process_method=None, process_automatically=None, auto_post_process_frequency=None, rename_episodes=None,
+                    xbmc_data=None, xbmc__frodo___data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None, mede8er_data=None,
+                    use_banner=None, keep_processed_dir=None, process_method=None, process_automatically=None, auto_post_process_frequency=None, rename_episodes=None, unpack=None,
                     move_associated_files=None, tv_download_dir=None, naming_custom_abd=None, naming_abd_pattern=None, naming_strip_year=None, delete_failed=None):
 
         results = []
@@ -1124,6 +1126,11 @@ class ConfigPostProcessing:
         if auto_post_process_frequency == '' or auto_post_process_frequency is None:
             auto_post_process_frequency = 10
 
+        if unpack == "on":
+            unpack = 1
+        else:
+            unpack = 0
+                        
         if rename_episodes == "on":
             rename_episodes = 1
         else:
@@ -1162,6 +1169,15 @@ class ConfigPostProcessing:
         else:
             sickbeard.autoPostProcesserScheduler.silent = True
         
+        if unpack:
+            if self.isRarSupported() != 'not supported':
+                sickbeard.UNPACK = unpack
+            else:
+                sickbeard.UNPACK = 0    
+                results.append("Unpacking Not Supported, disabling unpack setting")
+        else:
+            sickbeard.UNPACK = unpack
+        
         sickbeard.KEEP_PROCESSED_DIR = keep_processed_dir
         sickbeard.PROCESS_METHOD = process_method
         sickbeard.RENAME_EPISODES = rename_episodes
@@ -1171,6 +1187,7 @@ class ConfigPostProcessing:
         sickbeard.NAMING_STRIP_YEAR = naming_strip_year
 
         sickbeard.metadata_provider_dict['XBMC'].set_config(xbmc_data)
+        sickbeard.metadata_provider_dict['XBMC (Frodo+)'].set_config(xbmc__frodo___data)
         sickbeard.metadata_provider_dict['MediaBrowser'].set_config(mediabrowser_data)
         sickbeard.metadata_provider_dict['Synology'].set_config(synology_data)
         sickbeard.metadata_provider_dict['Sony PS3'].set_config(sony_ps3_data)
@@ -1240,6 +1257,25 @@ class ConfigPostProcessing:
         else:
             return "invalid"
 
+    @cherrypy.expose
+    def isRarSupported(self):
+        """ 
+        Test Packing Support:
+            - Simulating rar extraction in memory on test.rar file
+        """
+        
+        from lib.unrar2 import * 
+
+        try:
+            rar_path = os.path.join(sickbeard.PROG_DIR, 'lib', 'unrar2', 'test.rar')            
+            testing = RarFile(rar_path).read_files('*test.txt')
+            if testing[0][1]=='This is only a test.':
+                return 'supported'
+            logger.log(u'Rar Not Supported: Can not read the content of test file', Logger.ERROR)
+            return 'not supported'
+        except Exception, e:
+            logger.log(u'Rar Not Supported: ' + ex(e), logger.ERROR)
+            return 'not supported'
         
 class ConfigProviders:
 
@@ -1318,6 +1354,7 @@ class ConfigProviders:
                       torrentleech_username=None, torrentleech_password=None,
                       iptorrents_username=None, iptorrents_password=None, iptorrents_freeleech=None,
                       kat_trusted = None, kat_verified = None,
+                      scc_username=None, scc_password=None, 
                       newzbin_username=None, newzbin_password=None,
                       provider_order=None):
 
@@ -1403,7 +1440,9 @@ class ConfigProviders:
             elif curProvider == 'omgwtfnzbs':
                 sickbeard.OMGWTFNZBS = curEnabled  
             elif curProvider == 'kickasstorrents':
-                sickbeard.KAT = curEnabled                    
+                sickbeard.KAT = curEnabled
+            elif curProvider == 'sceneaccess':
+                sickbeard.SCC = curEnabled                 
             else:
                 logger.log(u"don't know what "+curProvider+" is, skipping")
 
@@ -1467,13 +1506,16 @@ class ConfigProviders:
         else:
             kat_verified = 0   
             
-        sickbeard.KAT_VERIFIED = kat_verified    
+        sickbeard.KAT_VERIFIED = kat_verified
+
+        sickbeard.SCC_USERNAME = scc_username.strip()
+        sickbeard.SCC_PASSWORD = scc_password.strip()
 
         sickbeard.NZBSRUS_UID = nzbs_r_us_uid.strip()
         sickbeard.NZBSRUS_HASH = nzbs_r_us_hash.strip()
         
-        sickbeard.OMGWTFNZBS_UID = omgwtfnzbs_uid.strip()
-        sickbeard.OMGWTFNZBS_KEY = omgwtfnzbs_key.strip()
+        sickbeard.OMGWTFNZBS_USERNAME = omgwtfnzbs_username.strip()
+        sickbeard.OMGWTFNZBS_APIKEY = omgwtfnzbs_apikey.strip()
 
         sickbeard.PROVIDER_ORDER = provider_list
 
@@ -1506,7 +1548,6 @@ class ConfigNotifications:
                           use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None, growl_notify_onsubtitledownload=None, growl_host=None, growl_password=None, 
                           use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None, prowl_notify_onsubtitledownload=None, prowl_api=None, prowl_priority=0, 
                           use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None, twitter_notify_onsubtitledownload=None, 
-                          use_notifo=None, notifo_notify_onsnatch=None, notifo_notify_ondownload=None, notifo_notify_onsubtitledownload=None, notifo_username=None, notifo_apisecret=None,
                           use_boxcar=None, boxcar_notify_onsnatch=None, boxcar_notify_ondownload=None, boxcar_notify_onsubtitledownload=None, boxcar_username=None,
                           use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None, pushover_notify_onsubtitledownload=None, pushover_userkey=None,
                           use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None, libnotify_notify_onsubtitledownload=None,
@@ -1642,26 +1683,6 @@ class ConfigNotifications:
             use_twitter = 1
         else:
             use_twitter = 0
-
-        if notifo_notify_onsnatch == "on":
-            notifo_notify_onsnatch = 1
-        else:
-            notifo_notify_onsnatch = 0
-
-        if notifo_notify_ondownload == "on":
-            notifo_notify_ondownload = 1
-        else:
-            notifo_notify_ondownload = 0
-            
-        if notifo_notify_onsubtitledownload == "on":
-            notifo_notify_onsubtitledownload = 1
-        else:
-            notifo_notify_onsubtitledownload = 0
-            
-        if use_notifo == "on":
-            use_notifo = 1
-        else:
-            use_notifo = 0
 
         if boxcar_notify_onsnatch == "on":
             boxcar_notify_onsnatch = 1
@@ -1892,13 +1913,6 @@ class ConfigNotifications:
         sickbeard.TWITTER_NOTIFY_ONSNATCH = twitter_notify_onsnatch
         sickbeard.TWITTER_NOTIFY_ONDOWNLOAD = twitter_notify_ondownload
         sickbeard.TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = twitter_notify_onsubtitledownload
-
-        sickbeard.USE_NOTIFO = use_notifo
-        sickbeard.NOTIFO_NOTIFY_ONSNATCH = notifo_notify_onsnatch
-        sickbeard.NOTIFO_NOTIFY_ONDOWNLOAD = notifo_notify_ondownload
-        sickbeard.NOTIFO_NOTIFY_ONSUBTITLEDOWNLOAD = notifo_notify_onsubtitledownload
-        sickbeard.NOTIFO_USERNAME = notifo_username
-        sickbeard.NOTIFO_APISECRET = notifo_apisecret
 
         sickbeard.USE_BOXCAR = use_boxcar
         sickbeard.BOXCAR_NOTIFY_ONSNATCH = boxcar_notify_onsnatch
@@ -2662,16 +2676,6 @@ class Home:
             return "Test prowl notice sent successfully"
         else:
             return "Test prowl notice failed"
-
-    @cherrypy.expose
-    def testNotifo(self, username=None, apisecret=None):
-        cherrypy.response.headers['Cache-Control'] = "max-age=0,no-cache,no-store"
-
-        result = notifiers.notifo_notifier.test_notify(username, apisecret)
-        if result:
-            return "Notifo notification succeeded. Check your Notifo clients to make sure it worked"
-        else:
-            return "Error sending Notifo notification"
 
     @cherrypy.expose
     def testBoxcar(self, username=None):
