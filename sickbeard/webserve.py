@@ -1346,7 +1346,7 @@ class ConfigProviders:
 
     @cherrypy.expose
     def saveProviders(self, nzbs_r_us_uid=None, nzbs_r_us_hash=None, newznab_string='',
-                      omgwtfnzbs_uid=None, omgwtfnzbs_key=None,
+                      omgwtfnzbs_username=None, omgwtfnzbs_apikey=None,
                       tvtorrents_digest=None, tvtorrents_hash=None, 
                       btn_api_key=None,
                       dtt_norar = None, dtt_single = None,
