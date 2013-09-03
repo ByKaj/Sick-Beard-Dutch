@@ -135,13 +135,11 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
         cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file)
 
-<<<<<<< HEAD
         # prevent infinite auto process loop when KEEP_PROCESSED_DIR = true, by marking videos as processed
         if sickbeard.KEEP_PROCESSED_DIR and hasProcessedHelperFile(cur_video_file_path):
             logHelper(u"Processing skipped for " + cur_video_file_path + ": .processed file detected.")
             continue
 
-=======
         # Avoid processing the same file again if we use KEEP_PROCESSING_DIR    
         if sickbeard.KEEP_PROCESSED_DIR:
             myDB = db.DBConnection()
@@ -154,7 +152,6 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
             returnStr += logHelper(u"Ignoring file: " + cur_video_file_path + " for now. Modified < 60s ago, might still be being written to", logger.DEBUG)
             continue
             
->>>>>>> Pistachitos
         try:
             processor = postProcessor.PostProcessor(cur_video_file_path, nzbName)
             process_result = processor.process()
