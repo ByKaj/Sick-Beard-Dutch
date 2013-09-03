@@ -106,7 +106,7 @@ def replaceExtension(filename, newExt):
 
 def isMediaFile(filename):
     # ignore samples
-    if re.search('(^|[\W_])sample\d*[\W_]', filename):
+    if re.search('(^|[\W_])(sample\d*|extra)[\W_]', filename, re.I):
         return False
 
     # ignore MAC OS's retarded "resource fork" files
@@ -123,6 +123,14 @@ def isRarFile(filename):
     archive_regex = '(?P<file>^(?P<base>(?:(?!\.part\d+\.rar$).)*)\.(?:(?:part0*1\.)?rar)$)'
     
     if re.search(archive_regex, filename):
+        return True
+    
+    return False
+
+def isBeingWritten(filepath):
+# Return True if file was modified within 60 seconds. it might still be being written to.
+    ctime = max(ek.ek(os.path.getctime, filepath), ek.ek(os.path.getmtime, filepath))
+    if ctime > time.time() - 60:
         return True
     
     return False
