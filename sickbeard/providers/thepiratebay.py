@@ -127,8 +127,12 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         #Filtering SingleEpisode/MultiSeason Torrent
         if len(videoFiles) < ep_number or len(videoFiles) > float(ep_number * 1.1 ): 
+            logger.log(u"Result " + title + " have " + str(ep_number) + " episode and episodes retrived in torrent are " + str(len(videoFiles)), logger.DEBUG)
             logger.log(u"Result " + title + " Seem to be a Single Episode or MultiSeason torrent, skipping result...", logger.DEBUG)
             return None
+        
+        if Quality.sceneQuality(title) != Quality.UNKNOWN:
+            return title
             
         for fileName in videoFiles:
             quality = Quality.sceneQuality(os.path.basename(fileName))
@@ -211,7 +215,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         return [search_string]
 
     def _doSearch(self, search_params, show=None):
-    
+
         results = []
         items = {'Season': [], 'Episode': []}
 
@@ -247,9 +251,9 @@ class ThePirateBayProvider(generic.TorrentProvider):
                         logger.log(u"ThePirateBay Provider found result " + torrent.group('title') + " but that doesn't seem like a trusted result so I'm ignoring it", logger.DEBUG)
                         continue
 
-                    #Try to find the real Quality for full season torrent analyzing files in torrent 
-                    if mode == 'Season' and Quality.sceneQuality(title) == Quality.UNKNOWN:     
-                        ep_number = int(len(search_params['Episode']) / len(allPossibleShowNames(self.show)))
+                    #Check number video files = episode in season and find the real Quality for full season torrent analyzing files in torrent 
+                    if mode == 'Season':
+                        ep_number = int(len(search_params['Episode']) / len(set(allPossibleShowNames(self.show))))
                         title = self._find_season_quality(title,id, ep_number)
                         
                     if not title:

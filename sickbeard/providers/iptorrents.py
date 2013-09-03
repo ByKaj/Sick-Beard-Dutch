@@ -164,22 +164,22 @@ class IPTorrentsProvider(generic.TorrentProvider):
                         logger.log(u"Invalid HTML data: " + str(data) , logger.DEBUG)
                         continue
                     
-                    if html.find(text='Nothing found!'):
+                    if html.find(text='No Torrents Found!'):
                         logger.log(u"No results found for: " + search_string + " (" + searchURL + ")", logger.DEBUG)
                         continue
                     
                     torrent_table = html.find('table', attrs = {'class' : 'torrents'})
                     torrents = torrent_table.find_all('tr') if torrent_table else []
-                    
-                    if not torrents:
-#                        logger.log(u"The data returned from " + self.name + " is incomplete, this result is unusable", logger.DEBUG)
+
+                    #Continue only if one Release is found                    
+                    if len(torrents)<2:
+                        logger.log(u"The Data returned from " + self.name + " do not contains any torrent", logger.WARNING)
                         continue
-                    
 
                     for result in torrents[1:]:
 
                         torrent = result.find_all('td')[1].find('a')
-
+                        
                         torrent_name = torrent.string
                         torrent_download_url = self.urls['base_url'] + (result.find_all('td')[3].find('a'))['href']
                         torrent_details_url = self.urls['base_url'] + torrent['href']
