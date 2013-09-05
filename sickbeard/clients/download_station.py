@@ -20,9 +20,6 @@
 #
 # Uses the Synology Download Station API: http://download.synology.com/download/other/Synology_Download_Station_Official_API_V3.pdf.
 
-import json
-import time
-
 import sickbeard
 from sickbeard.clients.generic import GenericClient
 
@@ -30,7 +27,7 @@ class DownloadStationAPI(GenericClient):
     
     def __init__(self, host=None, username=None, password=None):
                 
-        super(TransmissionAPI, self).__init__('DownloadStation', host, username, password)
+        super(DownloadStationAPI, self).__init__('DownloadStation', host, username, password)
 
         self.url = self.host + 'webapi/DownloadStation/task.cgi'
     
