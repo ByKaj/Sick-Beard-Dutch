@@ -864,7 +864,7 @@ def get_xml_text(element, mini_dom=False):
     if mini_dom:
         node = element
         for child in node.childNodes:
-            if child.nodeType in (Node.CDATA_SECTION_NODE, Node.TEXT_NODE):
+            if child.nodeType in (Node.CDATA_SECTION_NODE, Node.TEXT_NODE, Node.ELEMENT_NODE):
                 text += child.data
     else:
         if element is not None:

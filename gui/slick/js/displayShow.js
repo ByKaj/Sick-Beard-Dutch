@@ -1,6 +1,8 @@
 $(document).ready(function(){
 
     $('#sbRoot').ajaxEpSearch({'colorRow': true});
+
+    $('#sbRoot').ajaxEpRetry({'colorRow': true});
     
     $("td.status_column:contains('Snatched')").parent().css("background-color", "#EBC1EA");
     

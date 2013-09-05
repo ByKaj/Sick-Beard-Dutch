@@ -214,6 +214,32 @@ class GenericProvider:
             url = url.replace('&amp;', '&')
             
         return (title, url)
+
+    def _get_size(self, item):
+        """Gets the size from the newznab:attr if available
+        non-newznab providers should override this"""
+
+        try:
+            attrs = item.getElementsByTagName('newznab:attr')
+        except:
+            logger.log(u"Size logging needs to be implemented for " + self.name + ". Please report this.")
+            return -1
+
+        try:
+            size = next(x.getAttribute('value') for x in attrs if x.getAttribute('name') == 'size')
+            size = int(size)
+        except StopIteration:
+            logger.log(u"RSS did not contain size", logger.DEBUG)
+            logger.log(u"Provider: " + self.provider.getID(), logger.DEBUG)
+            logger.log(u"Attrs: " + str(attrs), logger.DEBUG)
+            #logger.log(u"Data: " + item.toprettyxml(), logger.DEBUG)
+            return -1
+
+        return size
+
+    def searchRSS(self):
+        self.cache.updateCache()
+        return self.cache.findNeededEpisodes()
         
     def findEpisode(self, episode, manualSearch=False):
 
@@ -237,6 +263,7 @@ class GenericProvider:
         for item in itemList:
 
             (title, url) = self._get_title_and_url(item)
+            size = self._get_size(item)
 
             # parse the file name
             try:
@@ -260,14 +287,15 @@ class GenericProvider:
                 logger.log(u"Ignoring result " + title + " because we don't want an episode that is " + Quality.qualityStrings[quality], logger.DEBUG)
                 continue
 
-            logger.log(u"Found result " + title + " at " + url, logger.DEBUG)
+            logger.log(u"Found result " + title + " at " + url + " size " + str(size), logger.DEBUG)
 
             result = self.getResult([episode])
             result.url = url
             result.name = title
             result.quality = quality
             result.provider = self
-            result.content = None 
+            result.content = None
+            result.size = size
             
             results.append(result)
 
@@ -284,6 +312,7 @@ class GenericProvider:
         for item in itemList:
 
             (title, url) = self._get_title_and_url(item)
+            size = self._get_size(item)
 
             quality = self.getQuality(item)
 
