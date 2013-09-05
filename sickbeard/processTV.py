@@ -148,7 +148,7 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
                 returnStr += logHelper(u"You're trying to post process the file " + cur_video_file + " that's already been processed, skipping", logger.DEBUG)
                 continue
 
-        if helper.isBeingWritten(cur_video_file_path):
+        if helpers.isBeingWritten(cur_video_file_path):
             returnStr += logHelper(u"Ignoring file: " + cur_video_file_path + " for now. Modified < 60s ago, might still be being written to", logger.DEBUG)
             continue
             
@@ -310,15 +310,16 @@ def validateDir(path, dirName):
         except InvalidNameException:
             pass
 
-    #Search for packed release   
-    packedFiles = filter(helpers.isRarFile, allFiles)
-
-    for packed in packedFiles:
-        try:
-            NameParser().parse(packed)
-            return True
-        except InvalidNameException:
-            pass    
+    if sickbeard.UNPACK:
+        #Search for packed release   
+        packedFiles = filter(helpers.isRarFile, allFiles)
+    
+        for packed in packedFiles:
+            try:
+                NameParser().parse(packed)
+                return True
+            except InvalidNameException:
+                pass    
     
     return False
 
