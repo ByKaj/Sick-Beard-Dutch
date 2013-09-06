@@ -50,6 +50,7 @@ class History(SizeAndProvider):
     def test(self):
         return self.hasTable('history')
 
+    def execute(self):
         self.connection.action('CREATE TABLE history (date NUMERIC, ' +
                                'size NUMERIC, release TEXT, provider TEXT);')
 
