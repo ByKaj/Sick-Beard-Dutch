@@ -362,20 +362,12 @@ class GitUpdateManager(UpdateManager):
 
         return (output, err, exit_status)
 
-<<<<<<< HEAD
-        if not branch_info or not branch_info[0]:
-            return 'dutch-tpb'
-=======
     def _find_installed_version(self):
         """
         Attempts to find the currently installed version of Sick Beard.
->>>>>>> dutch-pistachitos
 
         Uses git show to get commit version.
 
-<<<<<<< HEAD
-        return branch or 'dutch-tpb'
-=======
         Returns: True for success or False for failure
         """
 
@@ -390,7 +382,6 @@ class GitUpdateManager(UpdateManager):
             return True
         else:
             return False
->>>>>>> dutch-pistachitos
 
     def _find_git_branch(self):
         branch_info, err, exit_status = self._run_git(self._git_path, 'symbolic-ref -q HEAD')
@@ -433,11 +424,7 @@ class GitUpdateManager(UpdateManager):
         sickbeard.NEWEST_VERSION_STRING = None
 
         if self._num_commits_behind == 100:
-<<<<<<< HEAD
-            message = "or else you're ahead of dutch-tpb fork"
-=======
             newest_text = "You are ahead of " + self.branch + ". Update not possible."
->>>>>>> dutch-pistachitos
 
         elif self._num_commits_behind > 0:
 
