@@ -25,6 +25,8 @@ __all__ = ['ezrss',
            'dtt',
            'torrentleech',
            'kat',
+           'scc',
+           'hdbits',
            'nzbx',
            'iptorrents',
            'omgwtfnzbs'

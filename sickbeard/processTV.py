@@ -20,6 +20,7 @@ from __future__ import with_statement
 
 import os
 import shutil
+import stat
 
 import sickbeard 
 from sickbeard import postProcessor
@@ -29,6 +30,8 @@ from sickbeard.exceptions import ex
 from sickbeard import logger
 from sickbeard.name_parser.parser import NameParser, InvalidNameException
 
+from lib.unrar2 import RarFile, RarInfo
+from lib.unrar2.rar_exceptions import *
 
 def logHelper (logMessage, logLevel=logger.MESSAGE):
     logger.log(logMessage, logLevel)
@@ -41,6 +44,8 @@ def processDir (dirName, nzbName=None, recurse=False):
     dirName: The folder name to look in
     nzbName: The NZB name which resulted in this folder being downloaded
     """
+
+    global process_result, returnStr
 
     returnStr = ''
 
@@ -76,19 +81,24 @@ def processDir (dirName, nzbName=None, recurse=False):
             dirs = [dirs]
             files = []
 
-    videoFiles = filter(helpers.isMediaFile, files)
-
-    # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
-    if nzbName != None and len(videoFiles) >= 2:
-        nzbName = None
-
     returnStr += logHelper(u"PostProcessing Path: " + path, logger.DEBUG)
     returnStr += logHelper(u"PostProcessing Dirs: " + str(dirs), logger.DEBUG)
+    
+    rarFiles = filter(helpers.isRarFile, files)
+    files += unRAR(path, rarFiles)
+    videoFiles = filter(helpers.isMediaFile, files)
+
     returnStr += logHelper(u"PostProcessing Files: " + str(files), logger.DEBUG)
     returnStr += logHelper(u"PostProcessing VideoFiles: " + str(videoFiles), logger.DEBUG)
 
+    # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
+    if len(videoFiles) >= 2:
+        nzbName = None
+
     #Process Video File in the current Path
     for cur_video_file in videoFiles:
+
+        cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file)
 
         # Avoid processing the same file again if we use KEEP_PROCESSING_DIR    
         if sickbeard.KEEP_PROCESSED_DIR:
@@ -98,7 +108,9 @@ def processDir (dirName, nzbName=None, recurse=False):
                 returnStr += logHelper(u"You're trying to post process the file " + cur_video_file + " that's already been processed, skipping", logger.DEBUG)
                 continue
 
-        cur_video_file_path = ek.ek(os.path.join, dirName, cur_video_file)
+        if helpers.isBeingWritten(cur_video_file_path):
+            returnStr += logHelper(u"Ignoring file: " + cur_video_file_path + " for now. Modified < 60s ago, might still be being written to", logger.DEBUG)
+            continue
             
         try:
             processor = postProcessor.PostProcessor(cur_video_file_path, nzbName)
@@ -116,19 +128,19 @@ def processDir (dirName, nzbName=None, recurse=False):
             returnStr += logHelper(u"Processing failed for "+cur_video_file_path+": "+process_fail_message, logger.WARNING)
 
     #Process Video File in all TV Subdir
-    for dir in [x for x in dirs if validateDir(path, x, returnStr)]:
+    for dir in [x for x in dirs if validateDir(path, x)]:
         
         process_result = True
         
         for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dir), topdown=False):
 
-            #TODO ADD some other checking
-
-            videoFiles = filter(helpers.isMediaFile, fileList)
+            rarFiles = filter(helpers.isRarFile, fileList)
+            fileList += unRAR(processPath, rarFiles)
+            videoFiles = filter(helpers.isMediaFile, set(fileList))
             notwantedFiles = [x for x in fileList if x not in videoFiles]
 
             # If nzbName is set and there's more than one videofile in the folder, files will be lost (overwritten).
-            if nzbName != None and len(videoFiles) >= 2:
+            if len(videoFiles) >= 2:
                 nzbName = None
 
             for cur_video_file in videoFiles:
@@ -153,23 +165,33 @@ def processDir (dirName, nzbName=None, recurse=False):
                 #If something fail abort the processing on dir
                 if not process_result:
                     break
-                    
+
+            returnStr += logHelper(u"Cleaning up Folder " + processPath, logger.DEBUG)
+                                
             #Delete all file not needed
             for cur_file in notwantedFiles:
                 if sickbeard.PROCESS_METHOD != "move" or not process_result:
                     break
 
                 cur_file_path = ek.ek(os.path.join, processPath, cur_file)
+
+                returnStr += logHelper(u"Deleting file " + cur_file, logger.DEBUG)
+
+                #check first the read-only attribute
+                file_attribute = ek.ek(os.stat, cur_file_path)[0]
+                if (not file_attribute & stat.S_IWRITE):
+                    # File is read-only, so make it writeable
+                    returnStr += logHelper(u"Changing ReadOnly Flag for file " + cur_file, logger.DEBUG)
+                    try:
+                        ek.ek(os.chmod,cur_file_path,stat.S_IWRITE)
+                    except OSError, e:
+                        returnStr += logHelper(u"Cannot change permissions of " + cur_file_path + ': ' + e.strerror, logger.DEBUG)
+                try:        
+                    ek.ek(os.remove, cur_file_path)
+                except OSError, e:    
+                    returnStr += logHelper(u"Unable to delete file " + cur_file + ': ' + e.strerror, logger.DEBUG)
+
                     
-                try:
-                    processor = postProcessor.PostProcessor(cur_file_path, nzbName)
-                    processor._delete(cur_file_path)
-                    returnStr += logHelper(u"Deleting succeeded for " + cur_file_path, logger.DEBUG)
-                except exceptions.PostProcessingFailed, e:
-                    process_fail_message = ex(e)
-
-                returnStr += processor.log
-
             if sickbeard.PROCESS_METHOD == "move" and \
             ek.ek(os.path.normpath, processPath) != ek.ek(os.path.normpath, sickbeard.TV_DOWNLOAD_DIR):
             
@@ -186,8 +208,10 @@ def processDir (dirName, nzbName=None, recurse=False):
 
     return returnStr
 
-def validateDir(path, dirName, returnStr):
-
+def validateDir(path, dirName):
+    
+    global process_result, returnStr
+    
     returnStr += logHelper(u"Processing folder "+dirName, logger.DEBUG)
 
     # TODO: check if it's failed and deal with it if it is
@@ -210,16 +234,25 @@ def validateDir(path, dirName, returnStr):
             return False
 
     # Get the videofile list for the next checks
-    videoFiles = []
-    for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dirName)):
-        videoFiles += filter(helpers.isMediaFile, fileList)
+    allFiles = []
+    for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dirName), topdown=False):
 
+        # Check if any file was modified less than 60 sec.
+        for file in fileList:
+            if helpers.isBeingWritten(ek.ek(os.path.join, processPath, file)):
+                returnStr += logHelper(u"Ignoring Dir: " + processPath + " for now. Some files were Modified < 60s ago, might still be being written to", logger.DEBUG)
+                return False
+        
+        allFiles += fileList
+            
     # Avoid processing the same dir again if we use KEEP_PROCESSING_DIR    
     if sickbeard.KEEP_PROCESSED_DIR:
         numPostProcFiles = myDB.select("SELECT COUNT(release_name) as numfiles FROM tv_episodes WHERE release_name = ?", [dirName])
         if int(numPostProcFiles[0][0]) == len(videoFiles):
             returnStr += logHelper(u"You're trying to post process a dir that's already been processed, skipping", logger.DEBUG)
             return False
+
+    videoFiles = filter(helpers.isMediaFile, allFiles)
 
     #check if the dir have at least one tv video file
     for video in videoFiles:
@@ -228,5 +261,45 @@ def validateDir(path, dirName, returnStr):
             return True
         except InvalidNameException:
             pass
+
+    if sickbeard.UNPACK:
+        #Search for packed release   
+        packedFiles = filter(helpers.isRarFile, allFiles)
+    
+        for packed in packedFiles:
+            try:
+                NameParser().parse(packed)
+                return True
+            except InvalidNameException:
+                pass    
     
     return False
+
+def unRAR(path, rarFiles):
+    
+    global process_result, returnStr
+    
+    unpacked_files = []
+        
+    if sickbeard.UNPACK and rarFiles:
+
+        returnStr += logHelper(u"Packed Releases detected: " + str(rarFiles), logger.DEBUG)
+    
+        for archive in rarFiles:
+
+            returnStr += logHelper(u"Unpacking archive: " + archive, logger.DEBUG)
+    
+            try:
+                rar_handle = RarFile(os.path.join(path, archive))
+                rar_handle.extract(path = path, withSubpath = False, overwrite = False)
+                unpacked_files += [os.path.basename(x.filename) for x in rar_handle.infolist() if not x.isdir]
+                del rar_handle
+            except Exception, e:
+                 returnStr += logHelper(u"Failed Unrar archive " + archive + ': ' + ex(e), logger.ERROR)
+                 process_result = False
+                 continue
+     
+        returnStr += logHelper(u"UnRar content: " + str(unpacked_files), logger.DEBUG)
+        
+    return unpacked_files
+    
