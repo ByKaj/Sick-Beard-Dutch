@@ -30,7 +30,7 @@ import locale
 import logging
 
 from Cheetah.Template import Template
-import cherrypy.lib
+import cherrypy
 
 import sickbeard
 
@@ -46,6 +46,7 @@ from sickbeard import naming
 from sickbeard import scene_exceptions
 from sickbeard import subtitles
 from sickbeard import failed_history
+from sickbeard import failedProcessor
 
 from sickbeard.providers import newznab
 from sickbeard.common import Quality, Overview, statusStrings, qualityPresetStrings
@@ -753,6 +754,9 @@ class Manage:
         for release in toRemove:
             myDB.action('DELETE FROM failed WHERE release = ?', [release])
 
+        if toRemove or add:
+            raise cherrypy.HTTPRedirect('/manage/failedDownloads/')
+
         if limit == "0":
             sqlResults = myDB.select("SELECT * FROM failed")
         else:
@@ -1104,7 +1108,7 @@ class ConfigPostProcessing:
 
     @cherrypy.expose
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
-                    xbmc_data=None, xbmc__frodo___data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None, mede8er_data=None,
+                    xbmc_data=None, xbmc_v12__data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None, mede8er_data=None,
                     use_banner=None, keep_processed_dir=None, process_method=None, process_automatically=None, auto_post_process_frequency=None, rename_episodes=None, unpack=None,
                     move_associated_files=None, tv_download_dir=None, naming_custom_abd=None, naming_abd_pattern=None, naming_strip_year=None, delete_failed=None):
 
@@ -1187,7 +1191,7 @@ class ConfigPostProcessing:
         sickbeard.NAMING_STRIP_YEAR = naming_strip_year
 
         sickbeard.metadata_provider_dict['XBMC'].set_config(xbmc_data)
-        sickbeard.metadata_provider_dict['XBMC (Frodo+)'].set_config(xbmc__frodo___data)
+        sickbeard.metadata_provider_dict['XBMC v12+'].set_config(xbmc_v12__data)
         sickbeard.metadata_provider_dict['MediaBrowser'].set_config(mediabrowser_data)
         sickbeard.metadata_provider_dict['Synology'].set_config(synology_data)
         sickbeard.metadata_provider_dict['Sony PS3'].set_config(sony_ps3_data)
@@ -1354,7 +1358,8 @@ class ConfigProviders:
                       torrentleech_username=None, torrentleech_password=None,
                       iptorrents_username=None, iptorrents_password=None, iptorrents_freeleech=None,
                       kat_trusted = None, kat_verified = None,
-                      scc_username=None, scc_password=None, 
+                      scc_username=None, scc_password=None,
+                      hdbits_username=None, hdbits_passkey=None,
                       newzbin_username=None, newzbin_password=None,
                       provider_order=None):
 
@@ -1442,7 +1447,9 @@ class ConfigProviders:
             elif curProvider == 'kickasstorrents':
                 sickbeard.KAT = curEnabled
             elif curProvider == 'sceneaccess':
-                sickbeard.SCC = curEnabled                 
+                sickbeard.SCC = curEnabled
+            elif curProvider == 'hdbits':
+                sickbeard.HDBITS = curEnabled               
             else:
                 logger.log(u"don't know what "+curProvider+" is, skipping")
 
@@ -1510,6 +1517,9 @@ class ConfigProviders:
 
         sickbeard.SCC_USERNAME = scc_username.strip()
         sickbeard.SCC_PASSWORD = scc_password.strip()
+        
+        sickbeard.HDBITS_USERNAME = hdbits_username.strip()
+        sickbeard.HDBITS_PASSKEY = hdbits_passkey.strip()
 
         sickbeard.NZBSRUS_UID = nzbs_r_us_uid.strip()
         sickbeard.NZBSRUS_HASH = nzbs_r_us_hash.strip()
@@ -1957,6 +1967,11 @@ class ConfigNotifications:
         sickbeard.TRAKT_METHOD_ADD = trakt_method_add
         sickbeard.TRAKT_START_PAUSED = trakt_start_paused
 
+        if sickbeard.USE_TRAKT:
+            sickbeard.traktWatchListCheckerSchedular.silent = False
+        else:
+            sickbeard.traktWatchListCheckerSchedular.silent = True    
+
         sickbeard.USE_EMAIL = use_email
         sickbeard.EMAIL_NOTIFY_ONSNATCH = email_notify_onsnatch
         sickbeard.EMAIL_NOTIFY_ONDOWNLOAD = email_notify_ondownload
@@ -2022,10 +2037,12 @@ class ConfigSubtitles:
         if use_subtitles == "on":
             use_subtitles = 1
             if sickbeard.subtitlesFinderScheduler.thread == None or not sickbeard.subtitlesFinderScheduler.thread.isAlive():
+                sickbeard.subtitlesFinderScheduler.silent = False
                 sickbeard.subtitlesFinderScheduler.initThread()
         else:
             use_subtitles = 0
             sickbeard.subtitlesFinderScheduler.abort = True
+            sickbeard.subtitlesFinderScheduler.silent = True
             logger.log(u"Waiting for the SUBTITLESFINDER thread to exit")
             try:
                 sickbeard.subtitlesFinderScheduler.thread.join(5)
@@ -3444,6 +3461,31 @@ class Home:
         ep_obj = _getEpisode(show, season, episode)
         if isinstance(ep_obj, str):
             return json.dumps({'result': 'failure'})
+
+    @cherrypy.expose
+    def retryEpisode(self, show, season, episode):
+        try:
+            release = failed_history.findRelease(show, season, episode)
+            pp = failedProcessor.FailedProcessor(dirName=None, nzbName=release + '.nzb')
+            pp.process()
+            if pp.log:
+                ui.notifications.message('Info', pp.log)
+        except exceptions.FailedHistoryNotFoundException:
+            ui.notifications.error('Not Found Error', 'Couldn\'t find release in history. (Has it been over 30 days?)\n'
+                                   'Can\'t mark it as bad.')
+            return json.dumps({'result': 'failure'})
+        except exceptions.FailedHistoryMultiSnatchException:
+            ui.notifications.error('Multi-Snatch Error', 'The same episode was snatched again before the first one was done.\n'
+                                   'Please cancel any downloads of this episode and then set it back to wanted.\n Can\'t continue.')
+            return json.dumps({'result': 'failure'})
+        except exceptions.FailedProcessingFailed:
+            ui.notifications.error('Processing Failed', pp.log)
+            return json.dumps({'result': 'failure'})
+        except Exception as e:
+            ui.notifications.error('Unknown Error', 'Unknown exception: ' + str(e))
+            return json.dumps({'result': 'failure'})
+
+        return json.dumps({'result': 'success'})
 
         # make a queue item for it and put it on the queue
         ep_queue_item = search_queue.ManualSearchQueueItem(ep_obj)

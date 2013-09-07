@@ -72,7 +72,7 @@ class SearchResult:
     """
 
     def __init__(self, episodes):
-        self.provider = -1
+        self.provider = None
 
         # URL to the NZB/torrent file
         self.url = ""
@@ -89,13 +89,20 @@ class SearchResult:
         # release name
         self.name = ""
 
+        # size of the release. -1 = n/a
+        self.size = -1
+
     def __str__(self):
 
-        if self.provider == None:
+        if self.provider is None:
             return "Invalid provider, unable to print self"
 
         myString = self.provider.name + " @ " + self.url + "\n"
         myString += "Extra Info:\n"
+        myString += "Episode: " + str(self.episodes) + "\n"
+        myString += "Quality: " + Quality.qualityStrings[self.quality] + "\n"
+        myString += "Name: " + self.name + "\n"
+        myString += "Size: " + str(self.size) + "\n"
         for extra in self.extraInfo:
             myString += "  " + extra + "\n"
         return myString
