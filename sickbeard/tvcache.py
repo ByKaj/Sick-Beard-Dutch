@@ -139,9 +139,12 @@ class TVCache():
         return title.replace(' ', '.') 
 
     def _parseItem(self, item):
-        title = helpers.get_xml_text(item.getElementsByTagName('title')[0])
-        url = helpers.get_xml_text(item.getElementsByTagName('link')[0])
+        title = helpers.get_xml_text(item.find('title'))
+        url = helpers.get_xml_text(item.find('link'))
         attrs = item.getElementsByTagName('newznab:attr')
+
+        self._checkItemAuth(title, url)
+
         try:
             size = next(x.getAttribute('value') for x in attrs if x.getAttribute('name') == 'size')
             size = int(size)
@@ -152,13 +155,16 @@ class TVCache():
             #logger.log(u"Data: " + item.toprettyxml(), logger.DEBUG)
             size = -1
 
-        if not title or not url:
-            logger.log(u"The XML returned from the " + self.provider.name + " feed is incomplete, this result is unusable", logger.ERROR)
-            return
-
-        logger.log(u"Adding item from RSS to cache: %s (%s, %d)" % (title, url, size), logger.DEBUG)
-
-        self._addCacheEntry(title, url, size=size)
+        if title and url:
+            title = self._translateTitle(title)
+            url = self._translateLinkURL(url)
+            
+            logger.log(u"Adding item from RSS to cache: %s (%s, %d)" % (title, url, size), logger.DEBUG)
+            self._addCacheEntry(title, url, size=size)
+        
+        else:
+             logger.log(u"The XML returned from the " + self.provider.name + " feed is incomplete, this result is unusable", logger.DEBUG)
+             return
 
     def _getLastUpdate(self):
         myDB = self._getDB()
