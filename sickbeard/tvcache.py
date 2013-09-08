@@ -138,29 +138,22 @@ class TVCache():
     def _translateTitle(self, title):
         return title.replace(' ', '.') 
 
+    def _translateLinkURL(self, url):
+        return url.replace('&amp;', '&')
+
     def _parseItem(self, item):
+
         title = helpers.get_xml_text(item.find('title'))
         url = helpers.get_xml_text(item.find('link'))
-        attrs = item.getElementsByTagName('newznab:attr')
-
+        
         self._checkItemAuth(title, url)
-
-        try:
-            size = next(x.getAttribute('value') for x in attrs if x.getAttribute('name') == 'size')
-            size = int(size)
-        except StopIteration:
-            logger.log(u"RSS did not contain size", logger.DEBUG)
-            logger.log(u"Provider: " + self.provider.getID(), logger.DEBUG)
-            logger.log(u"Attrs: " + str(attrs), logger.DEBUG)
-            #logger.log(u"Data: " + item.toprettyxml(), logger.DEBUG)
-            size = -1
 
         if title and url:
             title = self._translateTitle(title)
             url = self._translateLinkURL(url)
             
-            logger.log(u"Adding item from RSS to cache: %s (%s, %d)" % (title, url, size), logger.DEBUG)
-            self._addCacheEntry(title, url, size=size)
+            logger.log(u"Adding item from RSS to cache: " + title, logger.DEBUG)
+            self._addCacheEntry(title, url)
         
         else:
              logger.log(u"The XML returned from the " + self.provider.name + " feed is incomplete, this result is unusable", logger.DEBUG)
