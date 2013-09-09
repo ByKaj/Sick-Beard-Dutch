@@ -241,7 +241,6 @@ class GenericProvider:
         for item in itemList:
 
             (title, url) = self._get_title_and_url(item)
-            size = self._get_size(item)
 
             # parse the file name
             try:
@@ -265,7 +264,7 @@ class GenericProvider:
                 logger.log(u"Ignoring result " + title + " because we don't want an episode that is " + Quality.qualityStrings[quality], logger.DEBUG)
                 continue
 
-            logger.log(u"Found result " + title + " at " + url + " size " + str(size), logger.DEBUG)
+            logger.log(u"Found result " + title + " at " + url , logger.DEBUG)
 
             result = self.getResult([episode])
             result.url = url
@@ -273,8 +272,7 @@ class GenericProvider:
             result.quality = quality
             result.provider = self
             result.content = None
-            result.size = size
-            
+  
             results.append(result)
 
         return results
@@ -290,7 +288,6 @@ class GenericProvider:
         for item in itemList:
 
             (title, url) = self._get_title_and_url(item)
-            size = self._get_size(item)
 
             quality = self.getQuality(item)
 
