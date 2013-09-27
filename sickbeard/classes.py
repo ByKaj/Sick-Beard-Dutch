@@ -191,4 +191,4 @@ class UIError():
     """
     def __init__(self, message):
         self.message = message
-        self.time = datetime.datetime.now()
+        self.time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

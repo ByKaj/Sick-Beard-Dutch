@@ -171,9 +171,11 @@ class PostProcessor(object):
             if associated_file_path == file_path:
                 continue
             # only list it if the only non-shared part is the extension or if it is a subtitle
-            if '.' in associated_file_path[len(base_name):] and not associated_file_path[len(associated_file_path)-3:] in common.subtitleExtensions:
-                continue
             if subtitles_only and not associated_file_path[len(associated_file_path)-3:] in common.subtitleExtensions:
+                continue
+
+            #Exclude .rar files from associated list
+            if re.search('(^.+\.(rar|r\d+)$)', associated_file_path):
                 continue
 
             file_path_list.append(associated_file_path)
@@ -243,21 +245,25 @@ class PostProcessor(object):
         if not file_list:
             self._log(u"There were no files associated with " + file_path + ", not moving anything", logger.DEBUG)
             return
+        
+        # create base name with file_path (media_file without .extension)
+        old_base_name = file_path.rpartition('.')[0]
+        old_base_name_length = len(old_base_name)
 
         # deal with all files
         for cur_file_path in file_list:
 
             cur_file_name = ek.ek(os.path.basename, cur_file_path)
-
-            # get the extension
-            cur_extension = ek.ek(os.path.splitext, cur_file_path)[1][1:]
+            
+            # get the extension without .
+            cur_extension = cur_file_path[old_base_name_length + 1:]
             
             # check if file have subtitles language
-            if cur_extension in common.subtitleExtensions:
-                cur_lang = ek.ek(os.path.splitext, ek.ek(os.path.splitext, cur_file_path)[0])[1][1:]
+            if os.path.splitext(cur_extension)[1][1:] in common.subtitleExtensions:
+                cur_lang = os.path.splitext(cur_extension)[0]
                 if cur_lang in sickbeard.SUBTITLES_LANGUAGES:
-                    cur_extension = cur_lang + '.' + cur_extension
-
+                    cur_extension = cur_lang + os.path.splitext(cur_extension)[1]
+        
             # replace .nfo with .nfo-orig to avoid conflicts
             if cur_extension == 'nfo':
                 cur_extension = 'nfo-orig'
@@ -468,12 +474,12 @@ class PostProcessor(object):
                 else:
                     logger.log(u"Nothing was good, found " + repr(test_name) + " and wanted either " + repr(self.nzb_name) + ", " + repr(self.folder_name) + ", or " + repr(self.file_name))
             else:
-                logger.log(u"Parse result not suficent(all folowing have to be set). will not save release name", logger.DEBUG)
-                logger.log(u"Parse result(series_name): " + str(parse_result.series_name), logger.DEBUG)
-                logger.log(u"Parse result(season_number): " + str(parse_result.season_number), logger.DEBUG)
-                logger.log(u"Parse result(episode_numbers): " + str(parse_result.episode_numbers), logger.DEBUG)
-                logger.log(u"Parse result(release_group): " + str(parse_result.release_group), logger.DEBUG)
-
+                logger.log(u"Parse result not sufficient(all following have to be set). Will not save release name", logger.DEBUG)
+                logger.log("Parse result(series_name): " + str(parse_result.series_name), logger.DEBUG)
+                logger.log("Parse result(season_number): " + str(parse_result.season_number), logger.DEBUG)
+                logger.log("Parse result(episode_numbers): " + str(parse_result.episode_numbers), logger.DEBUG)
+                logger.log("Parse result(release_group): " + str(parse_result.release_group), logger.DEBUG)
+                
         # for each possible interpretation of that scene name
         for cur_name in name_list:
             self._log(u"Checking scene exceptions for a match on " + cur_name, logger.DEBUG)
@@ -904,11 +910,6 @@ class PostProcessor(object):
         # create any folders we need
         helpers.make_dirs(dest_path)
 
-        # download subtitles
-        if sickbeard.USE_SUBTITLES and ep_obj.show.subtitles:
-            cur_ep.location = self.file_path
-            cur_ep.downloadSubtitles(force=True)
-
         # figure out the base name of the resulting episode file
         if sickbeard.RENAME_EPISODES:
             orig_extension = self.file_name.rpartition('.')[-1]
@@ -940,6 +941,13 @@ class PostProcessor(object):
               raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
         except (OSError, IOError):
             raise exceptions.PostProcessingFailed("Unable to move the files to their new home")
+
+        # download subtitles
+        if sickbeard.USE_SUBTITLES and ep_obj.show.subtitles:
+            for curEp in [ep_obj]:
+                with cur_ep.lock:
+                    cur_ep.location = ek.ek(os.path.join, dest_path, new_file_name)
+                    cur_ep.downloadSubtitles(force=True)
 
         # put the new location in the database
         for cur_ep in [ep_obj] + ep_obj.relatedEps:

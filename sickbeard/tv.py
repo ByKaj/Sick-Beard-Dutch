@@ -935,7 +935,7 @@ class TVShow(object):
                             helpers.chmodAsParent(subtitle.path)
                 
         except Exception as e:
-            logger.log("Error occurred when downloading subtitles: " + ex(e), logger.DEBUG)
+            logger.log("Error occurred when downloading subtitles: " + traceback.format_exc(), logger.DEBUG)
             return
 
 
@@ -1160,7 +1160,7 @@ class TVEpisode(object):
             subtitles = subliminal.download_subtitles([self.location], languages=need_languages, services=sickbeard.subtitles.getEnabledServiceList(), force=force, multi=True, cache_dir=sickbeard.CACHE_DIR)
             
         except Exception as e:
-            logger.log("Error occurred when downloading subtitles: " + str(e), logger.ERROR)
+            logger.log("Error occurred when downloading subtitles: " + traceback.format_exc(), logger.ERROR)
             return
 
         self.refreshSubtitles()
@@ -1604,7 +1604,7 @@ class TVEpisode(object):
             "Ep Name" and "Other Ep Name" becomes "Ep Name & Other Ep Name"
         """
 
-        multiNameRegex = "(.*) \(\d\)"
+        multiNameRegex = "(.*) \(\d{1,2}\)" 
 
         self.relatedEps = sorted(self.relatedEps, key=lambda x: x.episode)
 
@@ -1907,8 +1907,9 @@ class TVEpisode(object):
 
         proper_path = self.proper_path()
         absolute_proper_path = ek.ek(os.path.join, self.show.location, proper_path)
-        absolute_current_path_no_ext, file_ext = os.path.splitext(self.location)
-        
+        absolute_current_path_no_ext, file_ext = ek.ek(os.path.splitext, self.location)
+        absolute_current_path_no_ext_length = len(absolute_current_path_no_ext)
+
         related_subs = []
 
         current_path = absolute_current_path_no_ext
@@ -1932,16 +1933,16 @@ class TVEpisode(object):
         logger.log(u"Files associated to " + self.location + ": " + str(related_files), logger.DEBUG)
 
         # move the ep file
-        result = helpers.rename_ep_file(self.location, absolute_proper_path)
+        result = helpers.rename_ep_file(self.location, absolute_proper_path, absolute_current_path_no_ext_length)
 
         # move related files
         for cur_related_file in related_files:
-            cur_result = helpers.rename_ep_file(cur_related_file, absolute_proper_path)
+            cur_result = helpers.rename_ep_file(cur_related_file, absolute_proper_path, absolute_current_path_no_ext_length)
             if cur_result == False:
                 logger.log(str(self.tvdbid) + u": Unable to rename file " + cur_related_file, logger.ERROR)
 
         for cur_related_sub in related_subs:
-            cur_result = helpers.rename_ep_file(cur_related_sub, absolute_proper_subs_path)
+            cur_result = helpers.rename_ep_file(cur_related_sub, absolute_proper_subs_path, absolute_current_path_no_ext_length)
             if cur_result == False:
                 logger.log(str(self.tvdbid) + u": Unable to rename file " + cur_related_sub, logger.ERROR)
 

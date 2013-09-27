@@ -38,8 +38,6 @@ from sickbeard.common import SNATCHED, SNATCHED_PROPER, DOWNLOADED, SKIPPED, UNA
 from common import Quality, qualityPresetStrings, statusStrings
 from sickbeard import image_cache
 from lib.tvdb_api import tvdb_api, tvdb_exceptions
-from sickbeard import postProcessor
-from sickbeard.name_parser.parser import InvalidNameException 
 try:
     import json
 except ImportError:
@@ -1203,12 +1201,12 @@ class CMD_Logs(ApiCall):
         minLevel = logger.reverseNames[str(self.min_level).upper()]
 
         data = []
-        if os.path.isfile(logger.sb_log_instance.log_file):
-            f = ek.ek(open, logger.sb_log_instance.log_file)
+        if os.path.isfile(logger.sb_log_instance.log_file_path):
+            f = ek.ek(open, logger.sb_log_instance.log_file_path)
             data = f.readlines()
             f.close()
 
-        regex = "^(\w{3})\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$"
+        regex = "^(\d\d\d\d)\-(\d\d)\-(\d\d)\s*(\d\d)\:(\d\d):(\d\d)\s*([A-Z]+)\s*(.+?)\s*\:\:\s*(.*)$"
 
         finalData = []
 
@@ -1222,7 +1220,7 @@ class CMD_Logs(ApiCall):
             match = re.match(regex, x)
 
             if match:
-                level = match.group(6)
+                level = match.group(7)
                 if level not in logger.reverseNames:
                     lastLine = False
                     continue
@@ -1679,28 +1677,6 @@ class CMD_SickBeardShutdown(ApiCall):
         threading.Timer(2, sickbeard.invoke_shutdown).start()
         return _responds(RESULT_SUCCESS, msg="SickBeard is shutting down...")
 
-class CMD_SickBeardAnalyzeName(ApiCall):
-    _help = {"desc": "takes a name and tries to figure out a show, season and episode from it.",
-            "requiredParameters": {"name": {"desc": "the name to lookup"}}
-            }
-
-    def __init__(self, args, kwargs):
-        # required
-        self.name, args = self.check_params(args, kwargs, "name", None, True, "string", [])
-        # optional
-        # super, missing, help
-        ApiCall.__init__(self, args, kwargs)
-
-    def run(self):
-        processor = postProcessor.PostProcessor('', self.name)
-        try:
-            analyzed_name = processor._analyze_name(self.name, file=False)
-        except InvalidNameException, e:
-            logger.log(u"API :: SickBeardAnalyzeName :: NameParser failed with InvalidNameException: "+ repr(e), logger.DEBUG)
-            return _responds(RESULT_FAILURE, msg=ex(e))
-        return _responds(RESULT_SUCCESS, data={'tvdbid': analyzed_name[0],
-                                                'season':  analyzed_name[1],
-                                                'episodes': analyzed_name[2]})
 
 class CMD_Show(ApiCall):
     _help = {"desc": "display information for a given show",
@@ -2524,7 +2500,6 @@ _functionMaper = {"help": CMD_Help,
                   "sb.searchtvdb": CMD_SickBeardSearchTVDB,
                   "sb.setdefaults": CMD_SickBeardSetDefaults,
                   "sb.shutdown": CMD_SickBeardShutdown,
-                  "sb.analyzename": CMD_SickBeardAnalyzeName,
                   "show": CMD_Show,
                   "show.addexisting": CMD_ShowAddExisting,
                   "show.addnew": CMD_ShowAddNew,
