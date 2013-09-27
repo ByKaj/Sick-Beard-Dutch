@@ -30,7 +30,7 @@ from threading import Lock
 
 # apparently py2exe won't build these unless they're imported somewhere
 from sickbeard import providers, metadata
-from providers import ezrss, tvtorrents, btn, nzbsrus, newznab, womble, thepiratebay, dtt, torrentleech, kat, nzbx, iptorrents, omgwtfnzbs, scc, hdbits
+from providers import ezrss, tvtorrents, btn, newznab, womble, thepiratebay, torrentleech, kat, iptorrents, omgwtfnzbs, scc, hdbits
 from sickbeard.config import CheckSection, check_setting_int, check_setting_str, ConfigMigrator
 
 
@@ -38,6 +38,7 @@ from sickbeard import searchCurrent, searchBacklog, showUpdater, versionChecker,
 from sickbeard import helpers, db, exceptions, show_queue, search_queue, scheduler
 from sickbeard import logger
 from sickbeard import naming
+from sickbeard import ga
 
 from common import SD, SKIPPED, NAMING_REPEAT
 
@@ -84,6 +85,7 @@ loadingShowList = None
 
 providerList = []
 newznabProviderList = []
+torrentRssProviderList = []
 metadata_provider_dict = {}
 
 NEWEST_VERSION = None
@@ -94,6 +96,7 @@ INIT_LOCK = Lock()
 __INITIALIZED__ = False
 started = False
 
+ACTUAL_LOG_DIR = None
 LOG_DIR = None
 
 WEB_PORT = None
@@ -178,10 +181,6 @@ TORRENTLEECH_KEY = None
 BTN = False
 BTN_API_KEY = None
 
-DTT = False
-DTT_NORAR = False
-DTT_SINGLE = False
-
 THEPIRATEBAY = False
 THEPIRATEBAY_TRUSTED = False
 THEPIRATEBAY_PROXY = False
@@ -224,27 +223,13 @@ NZBS_HASH = None
 
 WOMBLE = False
 
-NZBX = False
-NZBX_COMPLETION = 100
-
 OMGWTFNZBS = False
 OMGWTFNZBS_USERNAME = None
 OMGWTFNZBS_APIKEY = None
 
-NZBSRUS = False
-NZBSRUS_UID = None
-NZBSRUS_HASH = None
-
-NZBMATRIX = False
-NZBMATRIX_USERNAME = None
-NZBMATRIX_APIKEY = None
-
 NEWZBIN = False
 NEWZBIN_USERNAME = None
 NEWZBIN_PASSWORD = None
-
-NZBX = False
-NZBX_COMPLETION = 100
 
 SAB_USERNAME = None
 SAB_PASSWORD = None
@@ -419,7 +404,7 @@ def initialize(consoleLogging=True):
 
     with INIT_LOCK:
 
-        global LOG_DIR, WEB_PORT, WEB_LOG, WEB_ROOT, WEB_USERNAME, WEB_PASSWORD, WEB_HOST, WEB_IPV6, USE_API, API_KEY, ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, \
+        global ACTUAL_LOG_DIR, LOG_DIR, WEB_PORT, WEB_LOG, WEB_ROOT, WEB_USERNAME, WEB_PASSWORD, WEB_HOST, WEB_IPV6, USE_API, API_KEY, ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, \
                 USE_NZBS, USE_TORRENTS, NZB_METHOD, NZB_DIR, DOWNLOAD_PROPERS, ALLOW_HIGH_PRIORITY, TORRENT_METHOD, \
                 SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, SAB_HOST, \
                 NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_HOST, currentSearchScheduler, backlogSearchScheduler, \
@@ -431,21 +416,21 @@ def initialize(consoleLogging=True):
                 PLEX_SERVER_HOST, PLEX_HOST, PLEX_USERNAME, PLEX_PASSWORD, \
                 showUpdateScheduler, __INITIALIZED__, LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SORT_ARTICLE, showList, loadingShowList, \
                 NZBS, NZBS_UID, NZBS_HASH, EZRSS, TVTORRENTS, TVTORRENTS_DIGEST, TVTORRENTS_HASH, BTN, BTN_API_KEY, \
-                DTT, DTT_NORAR, DTT_SINGLE, THEPIRATEBAY, THEPIRATEBAY_TRUSTED, THEPIRATEBAY_PROXY, THEPIRATEBAY_PROXY_URL, THEPIRATEBAY_BLACKLIST, TORRENTLEECH, TORRENTLEECH_USERNAME, TORRENTLEECH_PASSWORD, \
+                THEPIRATEBAY, THEPIRATEBAY_TRUSTED, THEPIRATEBAY_PROXY, THEPIRATEBAY_PROXY_URL, THEPIRATEBAY_BLACKLIST, TORRENTLEECH, TORRENTLEECH_USERNAME, TORRENTLEECH_PASSWORD, \
                 IPTORRENTS, IPTORRENTS_USERNAME, IPTORRENTS_PASSWORD, IPTORRENTS_FREELEECH, KAT, KAT_VERIFIED, SCC, SCC_USERNAME, SCC_PASSWORD, HDBITS, HDBITS_USERNAME, HDBITS_PASSKEY, \
                 TORRENT_DIR, USENET_RETENTION, SOCKET_TIMEOUT, SEARCH_FREQUENCY, DEFAULT_SEARCH_FREQUENCY, BACKLOG_SEARCH_FREQUENCY, \
                 QUALITY_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, STATUS_DEFAULT, \
                 GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-                USE_GROWL, GROWL_HOST, GROWL_PASSWORD, USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, PROWL_API, PROWL_PRIORITY, PROG_DIR, NZBMATRIX, NZBMATRIX_USERNAME, \
+                USE_GROWL, GROWL_HOST, GROWL_PASSWORD, USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, PROWL_API, PROWL_PRIORITY, PROG_DIR, \
                 USE_PYTIVO, PYTIVO_NOTIFY_ONSNATCH, PYTIVO_NOTIFY_ONDOWNLOAD, PYTIVO_NOTIFY_ONSUBTITLEDOWNLOAD, PYTIVO_UPDATE_LIBRARY, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME, \
                 USE_NMA, NMA_NOTIFY_ONSNATCH, NMA_NOTIFY_ONDOWNLOAD, NMA_NOTIFY_ONSUBTITLEDOWNLOAD, NMA_API, NMA_PRIORITY, \
                 USE_PUSHALOT, PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHALOT_AUTHORIZATIONTOKEN, \
-                NZBMATRIX_APIKEY, versionCheckScheduler, VERSION_NOTIFY, PROCESS_AUTOMATICALLY, UNPACK, \
+                versionCheckScheduler, VERSION_NOTIFY, PROCESS_AUTOMATICALLY, UNPACK, \
                 KEEP_PROCESSED_DIR, PROCESS_METHOD, TV_DOWNLOAD_DIR, TVDB_BASE_URL, MIN_SEARCH_FREQUENCY, \
                 showQueueScheduler, searchQueueScheduler, ROOT_DIRS, CACHE_DIR, ACTUAL_CACHE_DIR, TVDB_API_PARMS, \
                 NAMING_PATTERN, NAMING_MULTI_EP, NAMING_FORCE_FOLDERS, NAMING_ABD_PATTERN, NAMING_CUSTOM_ABD, NAMING_STRIP_YEAR, \
                 RENAME_EPISODES, properFinderScheduler, PROVIDER_ORDER, autoPostProcesserScheduler, \
-                NZBSRUS, NZBSRUS_UID, NZBSRUS_HASH, WOMBLE, NZBX, NZBX_COMPLETION, OMGWTFNZBS, OMGWTFNZBS_USERNAME, OMGWTFNZBS_APIKEY, providerList, newznabProviderList, \
+                WOMBLE, OMGWTFNZBS, OMGWTFNZBS_USERNAME, OMGWTFNZBS_APIKEY, providerList, newznabProviderList, torrentRssProviderList,\
                 EXTRA_SCRIPTS, USE_TWITTER, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, \
                 USE_BOXCAR, BOXCAR_USERNAME, BOXCAR_PASSWORD, BOXCAR_NOTIFY_ONDOWNLOAD, BOXCAR_NOTIFY_ONSUBTITLEDOWNLOAD, BOXCAR_NOTIFY_ONSNATCH, \
                 USE_PUSHOVER, PUSHOVER_USERKEY, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHOVER_NOTIFY_ONSNATCH, \
@@ -481,7 +466,10 @@ def initialize(consoleLogging=True):
         CheckSection(CFG, 'Pushalot')
         CheckSection(CFG, 'Subtitles')
 
-        LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
+        ACTUAL_LOG_DIR = check_setting_str(CFG, 'General', 'log_dir', 'Logs')
+        # put the log dir inside the data dir, unless an absolute path
+        LOG_DIR = os.path.normpath(os.path.join(DATA_DIR, ACTUAL_LOG_DIR))
+        
         if not helpers.makeDir(LOG_DIR):
             logger.log(u"!!! No log folder, logging to screen only!", logger.ERROR)
 
@@ -613,10 +601,6 @@ def initialize(consoleLogging=True):
         BTN = bool(check_setting_int(CFG, 'BTN', 'btn', 0))
         BTN_API_KEY = check_setting_str(CFG, 'BTN', 'btn_api_key', '')
 
-        DTT = bool(check_setting_int(CFG, 'DTT', 'dtt', 0))
-        DTT_NORAR = bool(check_setting_int(CFG, 'DTT', 'dtt_norar', 0))
-        DTT_SINGLE = bool(check_setting_int(CFG, 'DTT', 'dtt_single', 0))
-
         THEPIRATEBAY = bool(check_setting_int(CFG, 'THEPIRATEBAY', 'thepiratebay', 1))
         THEPIRATEBAY_TRUSTED = bool(check_setting_int(CFG, 'THEPIRATEBAY', 'thepiratebay_trusted', 1))
         THEPIRATEBAY_PROXY = bool(check_setting_int(CFG, 'THEPIRATEBAY', 'thepiratebay_proxy', 0))
@@ -647,22 +631,11 @@ def initialize(consoleLogging=True):
         NZBS_UID = check_setting_str(CFG, 'NZBs', 'nzbs_uid', '')
         NZBS_HASH = check_setting_str(CFG, 'NZBs', 'nzbs_hash', '')
 
-        NZBSRUS = bool(check_setting_int(CFG, 'NZBsRUS', 'nzbsrus', 0))
-        NZBSRUS_UID = check_setting_str(CFG, 'NZBsRUS', 'nzbsrus_uid', '')
-        NZBSRUS_HASH = check_setting_str(CFG, 'NZBsRUS', 'nzbsrus_hash', '')
-
-        NZBMATRIX = bool(check_setting_int(CFG, 'NZBMatrix', 'nzbmatrix', 0))
-        NZBMATRIX_USERNAME = check_setting_str(CFG, 'NZBMatrix', 'nzbmatrix_username', '')
-        NZBMATRIX_APIKEY = check_setting_str(CFG, 'NZBMatrix', 'nzbmatrix_apikey', '')
-
         NEWZBIN = bool(check_setting_int(CFG, 'Newzbin', 'newzbin', 0))
         NEWZBIN_USERNAME = check_setting_str(CFG, 'Newzbin', 'newzbin_username', '')
         NEWZBIN_PASSWORD = check_setting_str(CFG, 'Newzbin', 'newzbin_password', '')
 
         WOMBLE = bool(check_setting_int(CFG, 'Womble', 'womble', 0))
-
-        NZBX = bool(check_setting_int(CFG, 'nzbX', 'nzbx', 0))
-        NZBX_COMPLETION = check_setting_int(CFG, 'nzbX', 'nzbx_completion', 100)
 
         OMGWTFNZBS = bool(check_setting_int(CFG, 'omgwtfnzbs', 'omgwtfnzbs', 0))
         OMGWTFNZBS_USERNAME = check_setting_str(CFG, 'omgwtfnzbs', 'omgwtfnzbs_username', '')
@@ -903,6 +876,10 @@ def initialize(consoleLogging=True):
 
         newznabData = check_setting_str(CFG, 'Newznab', 'newznab_data', '')
         newznabProviderList = providers.getNewznabProviderList(newznabData)
+
+        torrentRssData = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
+        torrentRssProviderList = providers.getTorrentRssProviderList(torrentRssData)
+        
         providerList = providers.makeProviderList()
 
         # start up all the threads
@@ -920,6 +897,8 @@ def initialize(consoleLogging=True):
         # migrate the config if it needs it
         migrator = ConfigMigrator(CFG)
         migrator.migrate_config()
+        
+        ga.GA()
 
         currentSearchScheduler = scheduler.Scheduler(searchCurrent.CurrentSearcher(),
                                                      cycleTime=datetime.timedelta(minutes=SEARCH_FREQUENCY),
@@ -1220,7 +1199,7 @@ def save_config():
 
     new_config['General'] = {}
     new_config['General']['config_version'] = CONFIG_VERSION
-    new_config['General']['log_dir'] = LOG_DIR
+    new_config['General']['log_dir'] = ACTUAL_LOG_DIR if ACTUAL_LOG_DIR else 'Logs'
     new_config['General']['web_port'] = WEB_PORT
     new_config['General']['web_host'] = WEB_HOST
     new_config['General']['web_ipv6'] = int(WEB_IPV6)
@@ -1299,11 +1278,6 @@ def save_config():
     new_config['BTN']['btn'] = int(BTN)
     new_config['BTN']['btn_api_key'] = BTN_API_KEY
 
-    new_config['DTT'] = {}
-    new_config['DTT']['dtt'] = int(DTT)
-    new_config['DTT']['dtt_norar'] = int(DTT_NORAR)
-    new_config['DTT']['dtt_single'] = int(DTT_SINGLE)
-
     new_config['THEPIRATEBAY'] = {}
     new_config['THEPIRATEBAY']['thepiratebay'] = int(THEPIRATEBAY)
     new_config['THEPIRATEBAY']['thepiratebay_trusted'] = int(THEPIRATEBAY_TRUSTED)
@@ -1341,16 +1315,6 @@ def save_config():
     new_config['NZBs']['nzbs_uid'] = NZBS_UID
     new_config['NZBs']['nzbs_hash'] = NZBS_HASH
 
-    new_config['NZBsRUS'] = {}
-    new_config['NZBsRUS']['nzbsrus'] = int(NZBSRUS)
-    new_config['NZBsRUS']['nzbsrus_uid'] = NZBSRUS_UID
-    new_config['NZBsRUS']['nzbsrus_hash'] = NZBSRUS_HASH
-
-    new_config['NZBMatrix'] = {}
-    new_config['NZBMatrix']['nzbmatrix'] = int(NZBMATRIX)
-    new_config['NZBMatrix']['nzbmatrix_username'] = NZBMATRIX_USERNAME
-    new_config['NZBMatrix']['nzbmatrix_apikey'] = NZBMATRIX_APIKEY
-
     new_config['Newzbin'] = {}
     new_config['Newzbin']['newzbin'] = int(NEWZBIN)
     new_config['Newzbin']['newzbin_username'] = NEWZBIN_USERNAME
@@ -1358,10 +1322,6 @@ def save_config():
 
     new_config['Womble'] = {}
     new_config['Womble']['womble'] = int(WOMBLE)
-
-    new_config['nzbX'] = {}
-    new_config['nzbX']['nzbx'] = int(NZBX)
-    new_config['nzbX']['nzbx_completion'] = int(NZBX_COMPLETION)
 
     new_config['omgwtfnzbs'] = {}
     new_config['omgwtfnzbs']['omgwtfnzbs'] = int(OMGWTFNZBS)
@@ -1531,6 +1491,9 @@ def save_config():
 
     new_config['Newznab'] = {}
     new_config['Newznab']['newznab_data'] = '!!!'.join([x.configStr() for x in newznabProviderList])
+
+    new_config['TorrentRss'] = {}
+    new_config['TorrentRss']['torrentrss_data'] = '!!!'.join([x.configStr() for x in torrentRssProviderList])
 
     new_config['GUI'] = {}
     new_config['GUI']['gui_name'] = GUI_NAME
