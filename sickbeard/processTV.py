@@ -176,7 +176,9 @@ def processDir (dirName, nzbName=None, recurse=False, failed=False):
 
     #Process Video File in all TV Subdir
     for dir in [x for x in dirs if validateDir(path, x)]:
-        
+
+        process_result = True
+
         for processPath, processDir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dir), topdown=False):
 
             rarFiles = filter(helpers.isRarFile, fileList)
