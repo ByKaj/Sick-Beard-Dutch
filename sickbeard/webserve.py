@@ -163,6 +163,7 @@ def _getEpisode(show, season, episode):
 ManageMenu = [
     { 'title': 'Backlog Overview',          'path': 'manage/backlogOverview' },
     { 'title': 'Manage Searches',           'path': 'manage/manageSearches'  },
+    { 'title': 'Manage Torrents',           'path': 'manage/manageTorrents'  },    
     { 'title': 'Episode Status Management', 'path': 'manage/episodeStatuses' },
     { 'title': 'Failed Downloads',          'path': 'manage/failedDownloads' },
 ]
@@ -739,6 +740,7 @@ class Manage:
         redirect("/manage")
 
     @cherrypy.expose
+
     def failedDownloads(self, limit=100, toRemove=None, add=None):
 
         myDB = db.DBConnection("failed.db")
@@ -769,6 +771,27 @@ class Manage:
 
         return _munge(t)
 
+    def manageTorrents(self):
+
+        t = PageTemplate(file="manage_torrents.tmpl")
+        t.submenu = ManageMenu
+        
+        if re.search('localhost', sickbeard.TORRENT_HOST):
+        
+            if sickbeard.LOCALHOST_IP == '':
+                t.webui_url = re.sub('localhost', helpers.get_lan_ip(), sickbeard.TORRENT_HOST)
+            else:
+                t.webui_url = re.sub('localhost', sickbeard.LOCALHOST_IP, sickbeard.TORRENT_HOST)
+        else:
+            t.webui_url = sickbeard.TORRENT_HOST
+
+        if sickbeard.TORRENT_METHOD == 'utorrent':
+            t.webui_url = '/'.join(s.strip('/') for s in (t.webui_url, 'gui/'))
+        if sickbeard.TORRENT_METHOD == 'download_station':
+            t.webui_url = t.webui_url + 'download/'
+            
+        return _munge(t)
+        
 class History:
 
     @cherrypy.expose
@@ -2214,7 +2237,18 @@ class HomePostProcess:
         return _munge(t)
 
     @cherrypy.expose
-    def processEpisode(self, dirName=None, nzbName=None, jobName=None, quiet=None, failed="0"):
+
+    def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None, is_priority=None, failed="0"):
+
+        if force=="on":
+            force=True
+        else:
+            force=False
+            
+        if is_priority =="on":
+            is_priority = True
+        else:
+            is_priority = False
 
         if failed == "0":
             failed = False
@@ -2223,7 +2257,7 @@ class HomePostProcess:
         if not dirName:
             redirect("/home/postprocess")
         else:
-            result = processTV.processDir(dirName, nzbName, failed=failed)
+            result = processTV.processDir(dir, nzbName, process_method=process_method, force=force, is_priority=is_priority, failed=failed)
             if quiet != None and int(quiet) == 1:
                 return result
 
