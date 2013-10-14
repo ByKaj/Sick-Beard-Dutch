@@ -228,6 +228,7 @@ $(document).ready(function(){
 
       var config_id = $(this).find("input").attr('id').replace("enable_", "") + "Div";
       var config_form = '<div id="config"><form id="configForm_tip" action="saveProviders" method="post"><fieldset class="component-group-list tip_scale"><div class="providerDiv_tip">' + $("div[id*="+config_id+"]").html() + '</div></fieldset></form></div>'
+      var provider_name =  $.trim($(this).text()).replace('*','')
   
       if ($("div[id*="+config_id+"]").length == 0) {
         return false
@@ -257,7 +258,7 @@ $(document).ready(function(){
           content: {
           text: config_form,
                 title: {
-                    text: 'Config Provider',
+                    text: provider_name + ' Config',
                     button: true
                 }
           },
@@ -289,7 +290,7 @@ $(document).ready(function(){
         }
       });
 
-    $('.newznab_key').change(function(){
+    $(this).on('change', '.newznab_key', function(){
 
         var provider_id = $(this).attr('id');
         provider_id = provider_id.substring(0, provider_id.length-'_hash'.length);
@@ -340,7 +341,7 @@ $(document).ready(function(){
         $(this).populateTorrentRssSection();
     });
 
-    $('.provider_enabler').live('click', function(){
+    $(this).on('click', '.provider_enabler', function(){
         $(this).refreshProviderList();
     });
 
@@ -400,12 +401,12 @@ $(document).ready(function(){
     });
 
 
-    $("[class='providerDiv_tip'] input").live('change', function(){
+    $(this).on('change', "[class='providerDiv_tip'] input", function(){
         $('div .providerDiv ' + "[name=" + $(this).attr('name') + "]").replaceWith($(this).clone());
         $('div .providerDiv ' + "[newznab_name=" + $(this).attr('id') + "]").replaceWith($(this).clone());
     });
 
-    $("[class='providerDiv_tip'] select").live('change', function(){
+    $(this).on('change', "[class='providerDiv_tip'] select", function(){
 
     $(this).find('option').each( function() {
       if ($(this).is(':selected')) {
@@ -417,7 +418,7 @@ $(document).ready(function(){
 
     $('div .providerDiv ' + "[name=" + $(this).attr('name') + "]").empty().replaceWith($(this).clone())});
 
-    $(".enabler").live('change', function(){
+    $(this).on('change', '.enabler', function(){
       if ($(this).is(':checked')) {
           $('.content_'+$(this).attr('id')).each( function() {
               $(this).show()
@@ -439,11 +440,11 @@ $(document).ready(function(){
 
     // initialization stuff
 
-  $(this).hideConfigTab();
+    $(this).hideConfigTab();
 
-  $(this).showHideProviders();
+    $(this).showHideProviders();
 
-  $(this).showProvidersConfig();
+    $(this).showProvidersConfig();
 
     $("#provider_order_list").sortable({
         placeholder: 'ui-state-highlight',
