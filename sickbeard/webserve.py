@@ -102,7 +102,7 @@ class PageTemplate (Template):
         if "X-Forwarded-Proto" in cherrypy.request.headers:
             self.sbHttpsEnabled = True if cherrypy.request.headers['X-Forwarded-Proto'] == 'https' else False
 
-        logPageTitle = 'Logs &amp; Errors'
+        logPageTitle = 'Logs'
         if len(classes.ErrorViewer.errors):
             logPageTitle += ' ('+str(len(classes.ErrorViewer.errors))+')'
         self.logPageTitle = logPageTitle
