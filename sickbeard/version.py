@@ -1,1 +1,1 @@
-SICKBEARD_VERSION = "dutch-pistachitos"
+SICKBEARD_VERSION = "dutch-tpb-personal"
