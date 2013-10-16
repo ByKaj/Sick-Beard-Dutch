@@ -2238,7 +2238,7 @@ class HomePostProcess:
 
     @cherrypy.expose
 
-    def processEpisode(self, dir=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None, is_priority=None, failed="0"):
+    def processEpisode(self, dirName=None, nzbName=None, jobName=None, quiet=None, process_method=None, force=None, is_priority=None, failed="0"):
 
         if force=="on":
             force=True
@@ -2257,7 +2257,7 @@ class HomePostProcess:
         if not dirName:
             redirect("/home/postprocess")
         else:
-            result = processTV.processDir(dir, nzbName, process_method=process_method, force=force, is_priority=is_priority, failed=failed)
+            result = processTV.processDir(dirName, nzbName, process_method=process_method, force=force, is_priority=is_priority, failed=failed)
             if quiet != None and int(quiet) == 1:
                 return result
 
